@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>https://arxiv.org/abs/2610.12345v1</id>
+    <title>Foreign Exchange Forecasting with Limit Order Book Signals</title>
+    <summary>We study market microstructure, financial trading and return prediction.</summary>
+    <published>2026-10-22T01:00:00Z</published>
+  </entry>
+  <entry>
+    <id>https://arxiv.org/abs/2610.23456v1</id>
+    <title>A Survey of Geometry</title>
+    <summary>Geometric structures in algebraic topology.</summary>
+    <published>2026-10-22T01:00:00Z</published>
+  </entry>
+  <entry>
+    <id>https://arxiv.org/abs/2610.33333v1</id>
+    <title>Unrelated older note</title>
+    <summary>Unrelated mathematics.</summary>
+    <published>2026-10-22T01:00:00Z</published>
+  </entry>
+</feed>
