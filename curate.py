@@ -226,5 +226,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-[executed on device: voyager-rdc (39776536-9592-45e3-9fe6-64ec59327689)]

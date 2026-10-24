@@ -61,5 +61,3 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Publish Quant Folio digest'
           git push origin HEAD:main
-
-[executed on device: voyager-rdc (39776536-9592-45e3-9fe6-64ec59327689)]

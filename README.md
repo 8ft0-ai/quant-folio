@@ -41,5 +41,3 @@ No changes are made to `arxiv-quant-radar`.
 ## Cost envelope
 
 24 candidate abstracts at up to 1,600 characters plus titles and instructions typically consume approximately 8,000–13,000 input tokens; output is capped at 2,600 tokens. Multiply by the configured provider's current input/output token rates to estimate cost. Transient failures can mean as many as three requests; usage is printed when supplied by the provider.
-
-[executed on device: voyager-rdc (39776536-9592-45e3-9fe6-64ec59327689)]

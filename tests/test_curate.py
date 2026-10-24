@@ -69,5 +69,3 @@ class CurateTests(unittest.TestCase):
         self.assertEqual(result,[])
 
 if __name__=="__main__": unittest.main()
-
-[executed on device: voyager-rdc (39776536-9592-45e3-9fe6-64ec59327689)]
