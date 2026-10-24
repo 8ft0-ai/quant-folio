@@ -22,7 +22,7 @@ class ScoutTests(unittest.TestCase):
         report, seen, count = build(self.papers + [self.papers[0]], set(), self.today, 8, 8)
         self.assertEqual(count, 1)
         self.assertIn("2610.12345", seen)
-        self.assertIn("Abstract", report.lower().capitalize() if False else report)
+        self.assertIn("abstract only", report)
         self.assertIn("not verified", report)
 
     def test_empty_valid(self):
