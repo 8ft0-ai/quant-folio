@@ -60,6 +60,7 @@ def request_json(messages, model, api_key, max_tokens):
                "messages": messages, "response_format": {"type": "json_object"}}
     if model.startswith("nvidia/nemotron-3-ultra"):
         del payload["response_format"]
+        payload["reasoning"] = {"effort": "low"}
     request = Request(API, data=json.dumps(payload).encode("utf-8"), method="POST",
                       headers={"Authorization": "Bearer " + api_key,
                                "Content-Type": "application/json",
