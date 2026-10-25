@@ -4,7 +4,7 @@ Bounded arXiv discovery, abstract-based AI triage and evidence-labelled recommen
 
 ## Activation status
 
-**Not activated.** The workflow is manual-only. There is no weekly cron. Publication requires both manual `publish` selection and `QUANT_FOLIO_ENABLED=true`; neither should be enabled until separate owner approval.
+**Not activated.** A weekly schedule is prepared for Mondays at **01:17 UTC** (Monday **12:17 AEDT** or **11:17 AEST** in Sydney). It is inert while repository variable `QUANT_FOLIO_ENABLED` is not `true`. Manual non-publishing runs remain available. A manual publishing dispatch requires `publish=true` on `main` and the same enable variable. Do not set the variable or run a production publication without separate owner approval.
 
 ## Research pipeline
 
@@ -44,13 +44,17 @@ OPENROUTER_API_KEY=... python curate.py --reports /tmp/folio-reports --state /tm
 
 Optional: set `OPENROUTER_MODEL` to an allowlisted free model. For GitHub Actions, configure repository secret `OPENROUTER_API_KEY` and optional variable `QUANT_FOLIO_MODEL`. Use a manual non-publishing workflow dispatch and inspect the uploaded report artefact.
 
-## Acceptance still required
+## Weekly activation procedure (owner approval required)
 
-1. Confirm a functioning OpenRouter credential in the execution environment; do not put keys in a pull request or conversation.
-2. Read three representative quantitative-finance PDFs and compare the three free models against a human-reviewed evidence checklist, including leakage, costs and baselines. No benchmark-quality claims are made by model listings.
-3. Run manual non-publishing live-service verification and exact-head CI; inspect full-paper recommendations for unsupported claims and extraction omissions.
-4. Check Actions write permissions and actual branch protection without weakening protections. Publication might require a protected-branch-compatible alternative.
-5. Obtain separate owner authorisation before merging PR #2, enabling the weekly schedule or activating publication.
+Operational acceptance is recorded in merged PR #3 and Actions run 40183211150; do not repeat its three-run exercise.
+
+Before activation, independently confirm repository **Settings → Actions → General → Workflow permissions** permits the publish job's `contents: write` token, and confirm the effective rules governing `main` permit `github-actions[bot]` to push (without disabling any protection). The GitHub integration could read that the branch is reported unprotected and repository rulesets are empty, but its direct branch-protection check returned HTTP 403; an actual write has not been tested. Where bot pushes are prohibited, use a separate PR-based publication mechanism only with further owner authorisation; do not bypass review.
+
+After independent merge authorisation for this activation PR, the owner must separately authorise enabling publication. For activation, set repository Actions variable `QUANT_FOLIO_ENABLED=true`, ensure the existing `OPENROUTER_API_KEY` secret is available, and confirm the effective permissions and next scheduled run. The weekly schedule triggers only from the default branch. Do not run the `publish=true` manual dispatch until separately authorised.
+
+Successful runs produce `reports/YYYY-MM-DD.md` and update `data/seen.json` together in one Git commit pushed to `main`. A single concurrency group serialises manual and scheduled publication. If the run fails validation or publication, the workflow fails rather than recording successful publication; failed pushes leave no published digest/state. No paid fallback is configured.
+
+To pause future publication, set `QUANT_FOLIO_ENABLED=false`. The cron still triggers a skipped publication job; it performs no research or publication.
 
 ## Cost estimate
 
