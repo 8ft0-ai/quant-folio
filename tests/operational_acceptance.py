@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import re
 import tempfile
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -22,6 +23,39 @@ def digest(path):
 
 def ids(path):
     return curate.load_seen(path)
+
+
+def report_ids(report):
+    return set(re.findall(r"\\*\\*arXiv:\\*\\* ([^ \\n]+)", report))
+
+
+def report_counts(report):
+    match = re.search(r"\\*\\*AI-assessed candidates:\\*\\* (\\d+)\\s+· \\*\\*Recommended:\\*\\* (\\d+)", report)
+    if not match:
+        raise AssertionError("Missing report counts")
+    return tuple(map(int, match.groups()))
+
+
+def observed_execute(args, papers):
+    observed = {}
+    original = curate.assess_batches
+
+    def capture(candidates, limit, model, api_key):
+        result, usage = original(candidates, limit, model, api_key)
+        observed["assessed_ids"] = sorted(p["id"] for p in candidates)
+        observed["usage"] = usage
+        return result, usage
+
+    with patch.object(curate, "fetch", return_value=papers), patch.object(
+        curate, "assess_batches", side_effect=capture
+    ):
+        report = curate.execute(args)
+    observed.setdefault("assessed_ids", [])
+    observed.setdefault("usage", {"prompt_tokens": 0, "completion_tokens": 0})
+    observed["counts"] = report_counts(report)
+    observed["recommended_ids"] = sorted(report_ids(report))
+    assert len(observed["recommended_ids"]) == observed["counts"][1]
+    return report, observed
 
 
 def run(root):
@@ -42,27 +76,45 @@ def run(root):
             fixture=None, ai_fixture=None, today=today, window=8, limit=8,
             fetch_limit=100, max_candidates=10, model=MODEL, full_paper=False)
     first = args("run1")
-    with patch.object(curate, "fetch", return_value=papers):
-        report1 = curate.execute(first)
+    report1, obs1 = observed_execute(first, papers)
     assert "## 1." in report1, "Baseline had no recommendations"
     assert "**Assessment depth:** Abstract only." in report1
     assert "https://arxiv.org/abs/" in report1
     baseline_seen = ids(first.state)
-    assert {p["id"] for p in eligible} >= baseline_seen or baseline_seen
-    assert len(baseline_seen) == len(eligible)
+    assert baseline_seen == set(obs1["assessed_ids"])
+    assert baseline_seen == {p["id"] for p in eligible}
+
     second = args("run2")
     shutil.copyfile(first.state, second.state)
+    expected2, _ = curate.candidates_for_run(papers, baseline_seen, today, 8, 10)
+    report2, obs2 = observed_execute(second, papers)
+    second_seen = ids(second.state)
+    new_ids = set(obs2["assessed_ids"])
+    assert new_ids == {p["id"] for p in expected2}
+    assert new_ids.isdisjoint(baseline_seen), "Previously assessed paper reassessed"
+    assert set(obs2["recommended_ids"]).isdisjoint(report_ids(report1)), "Duplicate recommendation"
+    assert baseline_seen <= second_seen
+    assert second_seen == baseline_seen | new_ids, "Incorrect state transition"
+    assert obs2["counts"][0] == len(new_ids)
+    if not expected2:
+        assert obs2["counts"] == (0, 0)
+        assert obs2["usage"] == {"prompt_tokens": 0, "completion_tokens": 0}
+    # A truly exhausted input must produce a valid zero-candidate digest without inference.
+    exhausted = args("exhausted")
+    shutil.copyfile(second.state, exhausted.state)
+    exhausted_seen = ids(exhausted.state)
     with patch.object(curate, "fetch", return_value=papers), patch.object(
-        curate, "request_assessment", side_effect=AssertionError("duplicate inference attempted")
+        curate, "request_assessment", side_effect=AssertionError("inference on exhausted input")
     ):
-        report2 = curate.execute(second)
-    assert ids(second.state) == baseline_seen
-    assert "AI-assessed candidates:** 0" in report2
-    assert "Recommended:** 0" in report2
+        exhausted_report = curate.execute(exhausted)
+    exhausted_candidates, _ = curate.candidates_for_run(papers, exhausted_seen, today, 8, 10)
+    if not exhausted_candidates:
+        assert report_counts(exhausted_report) == (0, 0)
+        assert ids(exhausted.state) == exhausted_seen
+
     third = args("run3")
-    # Exercise a genuine candidate set in a separately isolated state, without
-    # modifying the successfully completed Run 1 and Run 2 snapshots.
-    before = (digest(third.state), digest(third.reports / (today.isoformat()+".md")))
+    report_path = third.reports / (today.isoformat() + ".md")
+    before = (digest(third.state), digest(report_path))
     with patch.object(curate, "fetch", return_value=papers), patch.object(
         curate, "request_assessment",
         return_value=({"recommendations": "invalid"}, {"prompt_tokens": 0, "completion_tokens": 0})
@@ -74,26 +126,26 @@ def run(root):
             print("run3_controlled_failure=detected_and_rejected")
         else:
             raise AssertionError("Malformed assessment accepted")
-    assert before == (digest(third.state), digest(third.reports / (today.isoformat()+".md")))
+    assert before == (digest(third.state), digest(report_path))
     print("run3_failed_state_and_digest=unchanged")
-    with patch.object(curate, "fetch", return_value=papers):
-        report3 = curate.execute(third)
+    report3, obs3 = observed_execute(third, papers)
     assert "## 1." in report3
-    assert ids(third.state) == baseline_seen
-    assert len(ids(third.state)) == len(baseline_seen)
+    assert ids(third.state) == set(obs3["assessed_ids"]) == baseline_seen
+    assert len(obs3["recommended_ids"]) == obs3["counts"][1]
+    assert len(obs3["recommended_ids"]) == len(set(obs3["recommended_ids"]))
     summary = {
         "source_revision": os.environ.get("GITHUB_SHA", "local"),
         "model": MODEL, "arxiv_fetched": len(papers),
-        "run1_candidates": len(eligible),
-        "run1_recommendations": report1.count("**Abstract-based summary:**"),
-        "run2_candidates": 0, "run2_recommendations": 0,
-        "run3_fault": "detected; state unchanged",
-        "run3_recovery_candidates": len(eligible),
-        "run3_recommendations": report3.count("**Abstract-based summary:**"),
-        "state_ids_run1": len(baseline_seen), "state_ids_run2": len(ids(second.state)),
-        "state_ids_run3_recovery": len(ids(third.state)),
-        "publication": "disabled", "schedule": "disabled",
-        "run3_inference": "live recovery", "fault_injection": "fixture only"
+        "run1": {**obs1, "state_ids": sorted(baseline_seen), "report_sha256": digest(first.reports / (today.isoformat() + ".md"))},
+        "run2": {**obs2, "state_ids_before": sorted(baseline_seen), "state_ids_after": sorted(second_seen),
+                 "new_ids": sorted(new_ids), "report_sha256": digest(second.reports / (today.isoformat() + ".md"))},
+        "empty_check": {"candidates": report_counts(exhausted_report)[0],
+                        "state_unchanged": ids(exhausted.state) == exhausted_seen},
+        "run3_fault": {"mode": "deterministic malformed-response injection",
+                       "rejected": True, "state_and_digest_unchanged": True},
+        "run3_recovery": {**obs3, "state_ids": sorted(ids(third.state)),
+                          "report_sha256": digest(report_path), "inference": "live provider"},
+        "publication": "disabled", "schedule": "disabled"
     }
     (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
     print("ACCEPTANCE_SCENARIOS_COMPLETED", json.dumps(summary))
