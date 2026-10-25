@@ -65,3 +65,13 @@ No changes to `8ft0-ai/arxiv-quant-radar` or additional hosting are required.
 ## Autonomous v1 default
 
 The manual pilot and eventual weekly digest use abstract-only curation by default. Full-paper assessment is opt-in (`python curate.py --full-paper`), not required for a useful digest. Provider responses must finish normally and contain strict JSON matching the recommendation schema. Failure diagnostics print finish reason, response length and reported token usage, never the model output or credentials.
+
+## Historical backfill V1 (Issue #7)
+
+The fixed-window, manually invoked backfill is independent of normal publication:
+
+```sh
+OPENROUTER_API_KEY=... python historical.py --output /tmp/quant-folio-history/2026-10-18.md
+```
+
+It searches arXiv `submittedDate:[202610120000 TO 202610182359]` (UTC) across the existing q-fin.TR/PM/ST/CP/MF categories, paginates in ascending submission order (100 per page, capped at 2,000 results), refuses incomplete retrieval and deduplicates the response by arXiv ID. It assesses up to 24 relevance-ranked abstracts via the normal five-paper/three-recommendation free Nemotron batching and recommends at most eight. It does **not** read or write `data/seen.json` or invoke the weekly publication workflow; the output is an explicit caller-supplied path. A later arXiv query is not a contemporaneous snapshot: indexed versions, withdrawals and category assignments may change. The included report is a bounded retrospective research briefing, not an independently verified performance study. Never point `--output` at an existing publication.
