@@ -195,6 +195,13 @@ def execute(args):
         for paper, _, _ in selected:
             try:
                 extracted, pages, truncated = extract_paper(paper["id"])
+            except (ValueError, OSError, TimeoutError, URLError, HTTPError) as exc:
+                full_results[paper["id"]] = [
+                    "**Assessment depth:** Abstract only — PDF extraction unavailable "
+                    f"({type(exc).__name__}); full-paper claims not assessed."
+                ]
+                continue
+            try:
                 response, paper_usage = request_json(
                     full_paper_prompt(paper, extracted, truncated),
                     args.model, api_key, 2200)
@@ -205,7 +212,7 @@ def execute(args):
                 total_completion += paper_usage.get("completion_tokens", 0) or 0
             except Exception as exc:
                 raise RuntimeError(
-                    f"Full-paper assessment failed for {paper['id']}: "
+                    f"Full-paper inference failed for {paper['id']}: "
                     f"{type(exc).__name__}") from None
     report = render(args.today, selected, len(candidates), len(fresh),
                     args.model, full_results)
