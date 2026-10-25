@@ -1,6 +1,6 @@
 # Quant Folio
 
-Bounded arXiv discovery, abstract triage, full-PDF extraction and evidence-labelled AI assessment using direct OpenRouter requests.
+Bounded arXiv discovery, abstract-based AI triage and evidence-labelled recommendations using direct OpenRouter requests. Optional full-PDF assessment is available via `--full-paper`.
 
 ## Activation status
 
@@ -10,9 +10,9 @@ Bounded arXiv discovery, abstract triage, full-PDF extraction and evidence-label
 
 1. `scout.py` retrieves a bounded recent arXiv Atom feed and ranks candidates.
 2. `curate.py` sends up to 24 titles/abstracts to a free model and validates a shortlist of at most eight.
-3. `full_paper.py` downloads each shortlisted paper from public arXiv (12 MB and 100-page limits), extracts PDF text with `pypdf` and limits transmitted extracted text to 90,000 characters per paper.
-4. The same free model examines objective, methods, results, design, limitations, reproducibility and practical relevance. Each section contains a claim, source-evidence locator and evidence status. A text-visible claim is **not** independent validation.
-5. Unextractable PDFs are clearly marked **abstract only** and excluded from the processed-ID state so a future run can retry them. A malformed or failed model response aborts without changing report or state.
+3. Optional `--full-paper`: `full_paper.py` downloads each shortlisted paper from public arXiv (12 MB and 100-page limits), extracts PDF text with `pypdf` and limits transmitted extracted text to 90,000 characters per paper.
+4. In optional full-paper mode, the same free model examines objective, methods, results, design, limitations, reproducibility and practical relevance. Each section contains a claim, source-evidence locator and evidence status. A text-visible claim is **not** independent validation.
+5. In optional full-paper mode, unextractable PDFs are clearly marked **abstract only** and excluded from the processed-ID state so a future run can retry them. A malformed or failed model response aborts without changing report or state.
 6. Only after successful curation does the program stage a Markdown report and seen-state; the gated publication workflow commits the files together.
 
 Truncated extracted text is always labelled partial-text review; diagrams, equations, tables and figures that do not extract reliably are not independently inspected. A successfully extracted PDF is not equivalent to reproducing results.
@@ -57,3 +57,7 @@ Optional: set `OPENROUTER_MODEL` to an allowlisted free model. For GitHub Action
 Model requests to the allowlisted free endpoints are advertised at **USD 0 per token**. For a full eight-paper weekly run, the theoretical endpoint charge is **USD 0**, subject to free capacity and account limits; this is not a guaranteed service-level commitment. Extraction runs on existing GitHub Actions infrastructure. No paid fallback is configured.
 
 No changes to `8ft0-ai/arxiv-quant-radar` or additional hosting are required.
+
+## Autonomous v1 default
+
+The manual pilot and eventual weekly digest use abstract-only curation by default. Full-paper assessment is opt-in (`python curate.py --full-paper`), not required for a useful digest. Provider responses must finish normally and contain strict JSON matching the recommendation schema. Failure diagnostics print finish reason, response length and reported token usage, never the model output or credentials.

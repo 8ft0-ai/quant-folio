@@ -66,10 +66,23 @@ def request_json(messages, model, api_key, max_tokens):
         try:
             with urlopen(request, timeout=90) as response:
                 result = json.loads(response.read(500_000))
-            message = result["choices"][0]["message"]["content"]
+            choice = result["choices"][0]
+            finish = choice.get("finish_reason", "unknown")
+            message = choice["message"]["content"]
+            usage = result.get("usage") or {}
             if not isinstance(message, str):
                 raise ValueError("Model response is not text")
-            return json.loads(message), result.get("usage", {})
+            diagnostic = (f"finish_reason={finish!r} chars={len(message)} "
+                          f"prompt_tokens={usage.get('prompt_tokens', 'unknown')} "
+                          f"completion_tokens={usage.get('completion_tokens', 'unknown')}")
+            if finish != "stop":
+                raise ValueError("Incomplete model response: " + diagnostic)
+            try:
+                parsed = json.loads(message)
+            except json.JSONDecodeError:
+                raise ValueError("Malformed completed model JSON: " + diagnostic) from None
+            print("inference_success " + diagnostic)
+            return parsed, usage
         except HTTPError as exc:
             if exc.code not in (429, 500, 502, 503, 504) or attempt:
                 raise RuntimeError(f"Inference HTTP {exc.code}") from None
@@ -99,7 +112,7 @@ def request_assessment(papers, limit, model, api_key):
 
 
 def validate_assessment(payload, papers, limit):
-    if not isinstance(payload, dict) or not isinstance(payload.get("recommendations"), list):
+    if not isinstance(payload, dict) or set(payload) != {"recommendations"} or not isinstance(payload.get("recommendations"), list):
         raise ValueError("AI assessment missing recommendations list")
     recommendations = payload["recommendations"]
     if len(recommendations) > limit:
@@ -108,7 +121,7 @@ def validate_assessment(payload, papers, limit):
     found = set()
     result = []
     for record in recommendations:
-        if not isinstance(record, dict):
+        if not isinstance(record, dict) or set(record) != {"id", "summary", "why"}:
             raise ValueError("Invalid AI recommendation")
         paper_id = record.get("id")
         if not isinstance(paper_id, str) or paper_id not in allowed or paper_id in found:
@@ -192,7 +205,7 @@ def execute(args):
     pending_ids = set()
     total_prompt = usage.get("prompt_tokens", 0) or 0
     total_completion = usage.get("completion_tokens", 0) or 0
-    if not args.ai_fixture:
+    if getattr(args, "full_paper", False) and not args.ai_fixture:
         for paper, _, _ in selected:
             try:
                 extracted, pages, truncated = extract_paper(paper["id"])
@@ -244,6 +257,7 @@ def main():
     parser.add_argument("--fetch-limit", type=int, default=200)
     parser.add_argument("--max-candidates", type=int, default=24)
     parser.add_argument("--model", default=os.environ.get("OPENROUTER_MODEL", DEFAULT_MODEL))
+    parser.add_argument("--full-paper", action="store_true", help="Optional, additional PDF assessment")
     args = parser.parse_args()
     if not (1 <= args.window <= 31 and 1 <= args.limit <= 8
             and 1 <= args.fetch_limit <= 500 and 1 <= args.max_candidates <= 40):
