@@ -6,7 +6,8 @@ on:
         description: Publish report and state (requires owner activation)
         type: boolean
         default: false
-# Weekly schedule intentionally absent until owner acceptance.
+  schedule:
+    - cron: '17 1 * * 1' # Mondays 01:17 UTC; 12:17 AEDT / 11:17 AEST
 permissions:
   contents: read
 concurrency:
@@ -14,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   pilot:
-    if: ${{ !inputs.publish }}
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.publish }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -35,7 +36,7 @@ jobs:
           path: /tmp/quant-folio-reports/*.md
           retention-days: 14
   publish:
-    if: ${{ inputs.publish && vars.QUANT_FOLIO_ENABLED == 'true' }}
+    if: ${{ (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish)) && github.ref == 'refs/heads/main' && vars.QUANT_FOLIO_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -44,6 +45,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+          persist-credentials: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -59,6 +61,8 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          test -s data/seen.json
+          test -s "reports/$(date -u +%F).md"
           git add -- reports/ data/seen.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -m 'Publish Quant Folio digest'
