@@ -13,7 +13,7 @@ Bounded arXiv discovery, abstract-based AI triage and evidence-labelled recommen
 3. Optional `--full-paper`: `full_paper.py` downloads each shortlisted paper from public arXiv (12 MB and 100-page limits), extracts PDF text with `pypdf` and limits transmitted extracted text to 90,000 characters per paper.
 4. In optional full-paper mode, the same free model examines objective, methods, results, design, limitations, reproducibility and practical relevance. Each section contains a claim, source-evidence locator and evidence status. A text-visible claim is **not** independent validation.
 5. In optional full-paper mode, unextractable PDFs are clearly marked **abstract only** and excluded from the processed-ID state so a future run can retry them. A malformed or failed model response aborts without changing report or state.
-6. Only after successful curation does the program stage a Markdown report and seen-state; the gated publication workflow commits the files together.
+6. Only after successful curation does the program write a Markdown report and seen-state. Each local file replacement is atomic individually, but the pair is not transactional; the gated publication workflow commits both files together after a successful run. Only successfully assessed candidate IDs are marked seen; unassessed papers remain eligible.
 
 Truncated extracted text is always labelled partial-text review; diagrams, equations, tables and figures that do not extract reliably are not independently inspected. A successfully extracted PDF is not equivalent to reproducing results.
 
@@ -21,11 +21,11 @@ Truncated extracted text is always labelled partial-text review; diagrams, equat
 
 Only these explicit free endpoints can be selected:
 
-- `nvidia/nemotron-3.5-super-vl:free` (default; JSON mode available)
+- `nvidia/nemotron-3.5-super-vl:free` (alternative; JSON mode available)
 - `nvidia/nemotron-3-ultra-550b-a55b:free` (JSON not enforced; strict local validation)
 - `google/gemma-4-26b-a4b-it:free` (JSON mode available)
 
-OpenRouter currently advertises zero per-token pricing for these endpoints; free quotas and upstream availability are not guaranteed. By design, one run makes at most one abstract-screening call and eight full-paper calls, with at most one retry on transient transport errors per call (up to 18 attempted HTTP requests). Each full-paper output is capped at 2,200 tokens; screening output at 2,600 tokens. Usage tokens are reported where available. Requests to non-allowlisted or paid models are rejected locally.
+OpenRouter currently advertises zero per-token pricing for these endpoints; free quotas and upstream availability are not guaranteed. One run makes up to eight abstract-screening calls (five abstracts per batch, up to 40 candidates under explicit CLI bounds; the default 24 candidates requires up to five calls) and up to eight optional full-paper calls. With at most one retry on transient transport errors per call, the maximum is 32 attempted HTTP requests under explicit bounds (26 with the default 24 candidates). Each full-paper output is capped at 2,200 tokens; screening output at 2,600 tokens. Usage tokens are reported where available. Requests to non-allowlisted or paid models are rejected locally.
 
 **Data handling:** paper text is sent to OpenRouter and its upstream provider. The free NVIDIA endpoint states that submitted sessions may be logged and used for product improvement. Only public arXiv research should be submitted. Do not transmit private files or account data.
 
