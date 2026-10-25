@@ -132,7 +132,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
     full_results = full_results or {}
     lines = [
         f"# Quant Folio — {today.isoformat()}", "",
-        "**Evidence boundary:** AI assessment of abstracts and extracted PDFs where available. "
+        "**Evidence boundary:** Abstract only when PDF evidence is unavailable; extracted PDF assessment otherwise. "
         "Reported experiments and performance claims were **not independently replicated or verified**.",
         "Search is bounded to selected arXiv quantitative-finance categories and is not exhaustive.",
         f"**Assessment:** {md(model) if candidates_count else 'not required (no eligible candidates)'} "
