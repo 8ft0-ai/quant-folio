@@ -242,7 +242,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
             f"**Theme:** {md(theme)} · **arXiv:** {md(paper['id'])} "
             f"· **Submitted:** {md(paper['published'])}", "",
             f"**Authors' contribution (abstract):** {md(summary)}", "",
-            f"**Why read it: Potential application (interpretation):** {md(why)}", "",
+            f"**Potential application (interpretation):** {md(why)}", "",
             "**Open question:** Do the reported conclusions generalise beyond the "
             "authors' assumptions, datasets and evaluation setting?", "",
             *details, "",
