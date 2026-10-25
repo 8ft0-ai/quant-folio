@@ -14,7 +14,9 @@ from scout import clean, fetch, parse_atom, rank
 from full_paper import extract_paper, validate_full_assessment, full_paper_prompt, render_full
 
 API = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODEL = "nvidia/nemotron-3.5-super-vl:free"
+DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
+BATCH_SIZE = 5
+BATCH_RECOMMENDATIONS = 3
 MAX_ABSTRACT = 1600
 MAX_RESPONSE_TOKENS = 2600
 
@@ -112,6 +114,25 @@ def request_assessment(papers, limit, model, api_key):
     ], model, api_key, MAX_RESPONSE_TOKENS)
 
 
+def assess_batches(papers, limit, model, api_key):
+    """Validate every bounded request before returning any combined result."""
+    selected = []
+    totals = {"prompt_tokens": 0, "completion_tokens": 0}
+    for offset in range(0, len(papers), BATCH_SIZE):
+        batch = papers[offset:offset + BATCH_SIZE]
+        payload, usage = request_assessment(
+            batch, min(BATCH_RECOMMENDATIONS, limit), model, api_key)
+        validated = validate_assessment(payload, batch, min(BATCH_RECOMMENDATIONS, limit))
+        selected.extend(validated)
+        for key in totals:
+            totals[key] += usage.get(key, 0) or 0
+    # Candidate order is the deterministic ranking from candidates_for_run.
+    # Keep globally best-ranked records, not whichever batch happened to respond first.
+    order = {paper["id"]: index for index, paper in enumerate(papers)}
+    selected.sort(key=lambda record: order[record[0]["id"]])
+    return selected[:limit], totals
+
+
 def validate_assessment(payload, papers, limit):
     if not isinstance(payload, dict) or set(payload) != {"recommendations"} or not isinstance(payload.get("recommendations"), list):
         raise ValueError("AI assessment missing recommendations list")
@@ -196,10 +217,9 @@ def execute(args):
     if candidates:
         if args.ai_fixture:
             payload = json.loads(args.ai_fixture.read_text(encoding="utf-8"))
+            selected = validate_assessment(payload, candidates, args.limit)
         else:
-            payload, usage = request_assessment(
-                candidates, args.limit, args.model, api_key)
-        selected = validate_assessment(payload, candidates, args.limit)
+            selected, usage = assess_batches(candidates, args.limit, args.model, api_key)
     else:
         selected = []
     full_results = {}
