@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 from io import BytesIO
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from curate import candidates_for_run, execute, load_seen, render, validate_assessment, request_json
+from curate import candidates_for_run, execute, load_seen, render, validate_assessment, request_json, assess_batches
 from scout import parse_atom
 
 FIXTURE = Path(__file__).with_name("fixture.atom")
@@ -133,6 +133,41 @@ class CurateTests(unittest.TestCase):
                     execute(args)
             self.assertEqual(previous.read_text(), "previous")
             self.assertEqual(load_seen(args.state), {"prior"})
+
+    def test_five_abstract_batches_and_global_cap(self):
+        papers = [
+            dict(self.candidates[0], id=f"paper-{index}")
+            for index in range(12)
+        ]
+        seen_sizes = []
+
+        def fake_assessment(batch, limit, model, api_key):
+            seen_sizes.append((len(batch), limit))
+            return {
+                "recommendations": [
+                    {"id": paper["id"], "summary": "Abstract-grounded finding",
+                     "why": "Relevant quantitative research"}
+                    for paper in batch[:limit]
+                ]
+            }, {"prompt_tokens": 10, "completion_tokens": 20}
+
+        with patch("curate.request_assessment", side_effect=fake_assessment):
+            selected, usage = assess_batches(papers, 8, "test-model", "test-key")
+        self.assertEqual(seen_sizes, [(5, 3), (5, 3), (2, 3)])
+        self.assertEqual(len(selected), 8)
+        self.assertEqual([p["id"] for p, _, _ in selected],
+                         [f"paper-{i}" for i in (0, 1, 2, 5, 6, 7, 10, 11)])
+        self.assertEqual(usage, {"prompt_tokens": 30, "completion_tokens": 60})
+
+    def test_batch_failure_is_not_silently_ignored(self):
+        papers = [dict(self.candidates[0], id=f"paper-{i}") for i in range(6)]
+        def fake_assessment(batch, limit, model, api_key):
+            if batch[0]["id"] == "paper-5":
+                return {"recommendations": [{"id": "unrecognised", "summary": "x", "why": "y"}]}, {}
+            return {"recommendations": []}, {}
+        with patch("curate.request_assessment", side_effect=fake_assessment):
+            with self.assertRaisesRegex(ValueError, "Unknown or duplicate"):
+                assess_batches(papers, 8, "test-model", "test-key")
 
     def test_future_papers_excluded(self):
         result,_=candidates_for_run(self.papers,set(),dt.date(2026,10,20),8,24)
