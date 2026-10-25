@@ -28,7 +28,7 @@ class CurateTests(unittest.TestCase):
     def test_abstract_evidence(self):
         selected=validate_assessment(VALID,self.candidates,8)
         report=render(self.today,selected,1,3,"fixture-model")
-        self.assertIn("abstract only",report)
+        self.assertIn("Abstract only",report)
         self.assertIn("not been independently replicated",report)
         self.assertIn("Why investigate",report)
 
