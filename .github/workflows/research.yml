@@ -1,21 +1,65 @@
-name: Generate reading list (manual pilot)
+name: Quant Folio research
 on:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish report and state (requires owner activation)
+        type: boolean
+        default: false
+# Weekly schedule intentionally absent until owner acceptance.
 permissions:
   contents: read
+concurrency:
+  group: quant-folio-publication
+  cancel-in-progress: false
 jobs:
   pilot:
+    if: ${{ !inputs.publish }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Generate report in temporary workspace
-        run: python scout.py --reports /tmp/quant-folio-report --state /tmp/quant-folio-state.json
-      - name: Upload report for inspection (no publication)
-        uses: actions/upload-artifact@v4
+      - run: python -m pip install 'pypdf>=5,<7'
+      - run: python -m unittest discover -s tests -v
+      - name: Non-publishing real-service pilot
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free' }}
+        run: python curate.py --reports /tmp/quant-folio-reports --state /tmp/quant-folio-seen.json
+      - uses: actions/upload-artifact@v4
         with:
           name: quant-folio-pilot
-          path: /tmp/quant-folio-report/*.md
+          path: /tmp/quant-folio-reports/*.md
           retention-days: 14
+  publish:
+    if: ${{ inputs.publish && vars.QUANT_FOLIO_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'pypdf>=5,<7'
+      - run: python -m unittest discover -s tests -v
+      - name: Assess and render
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free' }}
+        run: python curate.py
+      - name: Atomic publication of digest and state
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- reports/ data/seen.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Publish Quant Folio digest'
+          git push origin HEAD:main
