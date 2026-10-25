@@ -29,8 +29,8 @@ class CurateTests(unittest.TestCase):
         selected=validate_assessment(VALID,self.candidates,8)
         report=render(self.today,selected,1,3,"fixture-model")
         self.assertIn("abstract only",report)
-        self.assertIn("not independently",report)
-        self.assertIn("Why read it:",report)
+        self.assertIn("not been independently replicated",report)
+        self.assertIn("Potential application (interpretation):",report)
 
     def test_invalid_results_fail(self):
         for value in [
