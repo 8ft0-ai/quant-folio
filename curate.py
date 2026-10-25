@@ -164,34 +164,110 @@ def md(text):
             .replace("]", "\\]").replace("*", "\\*").replace("`", "\\`"))
 
 
-def render(today, selected, candidates_count, fresh_count, model, full_results=None):
+def research_theme(paper):
+    """Conservative descriptive grouping from the paper title, not a quality score."""
+    title = paper["title"].lower()
+    if any(term in title for term in ("limit order book", "market microstructure", "market impact")):
+        return "Market microstructure"
+    if any(term in title for term in ("portfolio", "value-at-risk", "rachev")):
+        return "Portfolio and risk"
+    if any(term in title for term in ("filter", "statistical arbitrage", "predictive signal")):
+        return "Signals and filtering"
+    if any(term in title for term in ("liquidity", "decentralized exchange")):
+        return "Market liquidity"
+    return "Other quantitative research"
+
+
+def compact(value, limit=130):
+    """Bound table text without asserting more than the assessment says."""
+    value = md(value).replace("|", "&#124;").replace("\\n", " ")
+    if len(value) <= limit:
+        return value
+    return value[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,.;") + "…"
+
+
+def render(today, selected, candidates_count, fresh_count, model, full_results=None,
+           fetched_count=None):
     full_results = full_results or {}
+    if fetched_count is None:
+        fetched_count = fresh_count
+    themes = {}
+    for paper, _, _ in selected:
+        theme = research_theme(paper)
+        themes[theme] = themes.get(theme, 0) + 1
+    repeated = [theme for theme, count in themes.items() if count >= 2]
     lines = [
-        f"# Quant Folio — {today.isoformat()}", "",
-        "**Evidence boundary:** abstract only when PDF evidence is unavailable; extracted PDF assessment otherwise. "
-        "Reported experiments and performance claims were **not independently replicated or verified**.",
-        "Search is bounded to selected arXiv quantitative-finance categories and is not exhaustive.",
-        f"**Assessment:** {md(model) if candidates_count else 'not required (no eligible candidates)'} "
-        "· **Source:** arXiv Atom metadata and abstracts", "",
+        f"# Quant Folio — Research intelligence briefing · {today.isoformat()}", "",
+        "## 1. Executive briefing", "",
+        f"**Retrieved:** {fetched_count} · **New unique:** {fresh_count} · "
+        f"**AI-assessed:** {candidates_count} · **Shortlisted:** {len(selected)}", "",
+        "**Evidence and scope:** This is a bounded selection from arXiv quantitative-finance "
+        "categories, not exhaustive field coverage or a historical trend analysis. "
+        "Summaries describe authors' abstract-level claims; practical applications are "
+        "Quant Folio interpretations, not verified outcomes. Experimental results have "
+        "not been independently replicated or verified. Optional full-paper assessments "
+        "are identified individually.", "",
     ]
     if not selected:
-        lines.extend(["No new papers were recommended from this bounded search.", ""])
-    for index, (paper, summary, why) in enumerate(selected, 1):
         lines.extend([
-            f"## {index}. [{md(paper['title'])}]({paper['url']})",
-            f"**arXiv:** {paper['id']} · **Submitted:** {paper['published']}",
-            "**Evidence examined:** arXiv abstract and full-paper status below.",
-            f"**Abstract-based summary:** {md(summary)}",
-            f"**Why read it:** {md(why)}",
-            "**Validation:** Authors' experimental findings are not independently replicated.",
-            *full_results.get(paper["id"], ["**Assessment depth:** Abstract only."]), "",
+            "No papers were shortlisted from this run. No themes or research "
+            "opportunities can be inferred from an empty selection.", "",
         ])
-    lines.extend([
-        f"**New unique papers:** {fresh_count} · **AI-assessed candidates:** {candidates_count} "
-        f"· **Recommended:** {len(selected)}", "",
-    ])
-    return "\n".join(lines)
-
+    else:
+        if repeated:
+            lines.extend([
+                "**Themes within this shortlist:** " + "; ".join(
+                    f"{md(theme)} ({themes[theme]} papers)" for theme in repeated[:3]
+                ) + ".", "",
+            ])
+        else:
+            lines.extend([
+                "The selection is too varied to infer a recurring theme this week.", "",
+            ])
+        lines.extend([
+            "**What is noteworthy:** The selected papers offer different approaches "
+            "to quantitative-finance questions; the links below provide the source "
+            "material for checking methods and reported results.", "",
+            "**Investigate first (reading order, not a quality ranking):**",
+        ])
+        for paper, _, _ in selected[:3]:
+            lines.append(f"- [{md(paper['title'])}]({paper['url']})")
+        lines.append("")
+    lines.extend(["## 2. Research cards", ""])
+    for index, (paper, summary, why) in enumerate(selected, 1):
+        theme = research_theme(paper)
+        details = full_results.get(paper["id"], ["**Assessment depth:** Abstract only."])
+        lines.extend([
+            f"### {index}. [{md(paper['title'])}]({paper['url']})", "",
+            f"**Theme:** {md(theme)} · **arXiv:** {md(paper['id'])} "
+            f"· **Submitted:** {md(paper['published'])}", "",
+            f"**Authors' contribution (abstract):** {md(summary)}", "",
+            f"**Potential application (interpretation):** {md(why)}", "",
+            "**Open question:** Do the reported conclusions generalise beyond the "
+            "authors' assumptions, datasets and evaluation setting?", "",
+            *details, "",
+            "---", "",
+        ])
+    lines.extend(["## 3. Comparative research matrix", ""])
+    if selected:
+        lines.extend([
+            "| Paper | Approach reported in assessment | Potential application | Evidence |",
+            "| --- | --- | --- | --- |",
+        ])
+        for paper, summary, why in selected:
+            depth = "Full-paper assessment" if paper["id"] in full_results and any(
+                "Full-paper" in line or "PDF" in line for line in full_results[paper["id"]]
+            ) and not any("Abstract only" in line for line in full_results[paper["id"]]) else "Abstract only"
+            lines.append(
+                f"| [{compact(paper['title'], 65)}]({paper['url']}) "
+                f"| {compact(summary)} | {compact(why)} | {depth} |"
+            )
+        lines.append("")
+    else:
+        lines.extend(["No comparison is possible without shortlisted papers.", ""])
+    # Research opportunities are intentionally omitted until source-grounded,
+    # independently validated cross-paper hypotheses are available.
+    return "\\n".join(lines)
 
 def atomic_write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -254,7 +330,7 @@ def execute(args):
     # Only successfully assessed candidates are seen; unassessed papers remain eligible.
     new_seen = (seen | {paper["id"] for paper in candidates}) - pending_ids
     report = render(args.today, selected, len(candidates), len(fresh),
-                    args.model, full_results)
+                    args.model, full_results, fetched_count=len(papers))
     target = args.reports / (args.today.isoformat() + ".md")
     # No files are changed before retrieval, assessment, and validation succeed.
     # Local writes are atomic individually, not transactional across both paths.
