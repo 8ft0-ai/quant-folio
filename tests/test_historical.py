@@ -36,5 +36,3 @@ class HistoricalTests(unittest.TestCase):
                 self.assertIn("## 2. Research at a glance",report)
                 self.assertNotIn("## 4. Research opportunities",report)
 if __name__=="__main__": unittest.main()
-
-[executed on device: voyager-rdc (39776536-9592-45e3-9fe6-64ec59327689)]

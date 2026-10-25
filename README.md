@@ -75,5 +75,3 @@ OPENROUTER_API_KEY=... python historical.py --output /tmp/quant-folio-history/20
 ```
 
 It searches arXiv `submittedDate:[202610120000 TO 202610182359]` (UTC) across the existing q-fin.TR/PM/ST/CP/MF categories, paginates in ascending submission order (100 per page, capped at 2,000 results), refuses incomplete retrieval and deduplicates the response by arXiv ID. It assesses up to 24 relevance-ranked abstracts via the normal five-paper/three-recommendation free Nemotron batching and recommends at most eight. It does **not** read or write `data/seen.json` or invoke the weekly publication workflow; the output is an explicit caller-supplied path. A later arXiv query is not a contemporaneous snapshot: indexed versions, withdrawals and category assignments may change. The included report is a bounded retrospective research briefing, not an independently verified performance study. Never point `--output` at an existing publication.
-
-[executed on device: voyager-rdc (39776536-9592-45e3-9fe6-64ec59327689)]
