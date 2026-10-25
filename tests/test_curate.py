@@ -85,6 +85,7 @@ class CurateTests(unittest.TestCase):
             (json.dumps(VALID), "stop", None),
             ('{"recommendations":[{"id":"2610.', "length", "Incomplete model response"),
             ('{"recommendations":[{"id":"2610.', "stop", "Malformed completed model JSON"),
+            (None, "stop", "Missing or non-text model content"),
         ]
         for content, reason, expected in cases:
             with self.subTest(reason=reason, expected=expected):
@@ -94,6 +95,7 @@ class CurateTests(unittest.TestCase):
                             request_json([], "nvidia/nemotron-3.5-super-vl:free", "test-key", 200)
                         self.assertIn("prompt_tokens=100", str(raised.exception))
                         self.assertIn("chars=", str(raised.exception))
+                        self.assertIn("finish_reason=", str(raised.exception))
                     else:
                         value, usage = request_json([], "nvidia/nemotron-3.5-super-vl:free", "test-key", 200)
                         self.assertEqual(value, VALID)

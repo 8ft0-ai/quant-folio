@@ -70,11 +70,12 @@ def request_json(messages, model, api_key, max_tokens):
             finish = choice.get("finish_reason", "unknown")
             message = choice["message"]["content"]
             usage = result.get("usage") or {}
-            if not isinstance(message, str):
-                raise ValueError("Model response is not text")
-            diagnostic = (f"finish_reason={finish!r} chars={len(message)} "
+            diagnostic = (f"finish_reason={finish!r} "
+                          f"chars={len(message) if isinstance(message, str) else 'unavailable'} "
                           f"prompt_tokens={usage.get('prompt_tokens', 'unknown')} "
                           f"completion_tokens={usage.get('completion_tokens', 'unknown')}")
+            if not isinstance(message, str):
+                raise ValueError("Missing or non-text model content: " + diagnostic)
             if finish != "stop":
                 raise ValueError("Incomplete model response: " + diagnostic)
             try:
