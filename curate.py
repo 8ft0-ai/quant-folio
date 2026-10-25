@@ -186,89 +186,85 @@ def compact(value, limit=130):
     return value[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,.;") + "…"
 
 
+def evidence_depth(paper_id, full_results):
+    details = full_results.get(paper_id, [])
+    if not details or any("abstract only" in line.lower() for line in details):
+        return "Abstract only"
+    return "Full-paper assessment"
+
+
 def render(today, selected, candidates_count, fresh_count, model, full_results=None,
            fetched_count=None):
     full_results = full_results or {}
-    if fetched_count is None:
-        fetched_count = fresh_count
+    fetched = str(fetched_count) if fetched_count is not None else "Not recorded"
     themes = {}
     for paper, _, _ in selected:
-        theme = research_theme(paper)
-        themes[theme] = themes.get(theme, 0) + 1
-    repeated = [theme for theme, count in themes.items() if count >= 2]
+        category = research_theme(paper)
+        themes[category] = themes.get(category, 0) + 1
+    repeated = [category for category, count in themes.items() if count >= 2]
     lines = [
         f"# Quant Folio — Research intelligence briefing · {today.isoformat()}", "",
         "## 1. Executive briefing", "",
-        f"**Retrieved:** {fetched_count} · **New unique:** {fresh_count} · "
+        f"**Retrieved:** {fetched} · **New unique:** {fresh_count} · "
         f"**AI-assessed:** {candidates_count} · **Shortlisted:** {len(selected)}", "",
-        "**Evidence and scope:** This is a bounded selection from arXiv quantitative-finance "
-        "categories, not exhaustive field coverage or a historical trend analysis. "
-        "Summaries describe authors' claims (abstract only unless marked otherwise); practical applications are "
-        "Quant Folio interpretations, not verified outcomes. Experimental results have "
-        "not been independently replicated or verified. Optional full-paper assessments "
-        "are identified individually.", "",
     ]
     if not selected:
-        lines.extend([
-            "No new papers were recommended from this bounded search. No themes or research "
-            "opportunities can be inferred from an empty selection.", "",
-        ])
+        lines.extend(["No new papers were recommended from this bounded search.", ""])
     else:
         if repeated:
             lines.extend([
-                "**Themes within this shortlist:** " + "; ".join(
-                    f"{md(theme)} ({themes[theme]} papers)" for theme in repeated[:3]
+                "**Themes in this shortlist:** " + "; ".join(
+                    f"{md(category)} ({themes[category]} papers)"
+                    for category in repeated[:3]
                 ) + ".", "",
             ])
         else:
-            lines.extend([
-                "The selection is too varied to infer a recurring theme this week.", "",
-            ])
-        lines.extend([
-            "**What is noteworthy:** The selected papers offer different approaches "
-            "to quantitative-finance questions; the links below provide the source "
-            "material for checking methods and reported results.", "",
-            "**Investigate first (reading order, not a quality ranking):**",
-        ])
+            lines.extend(["The selection is too varied to infer a recurring theme.", ""])
+        lines.extend(["**Investigate first (shortlist order, not a quality ranking):**", ""])
         for paper, _, _ in selected[:3]:
             lines.append(f"- [{md(paper['title'])}]({paper['url']})")
         lines.append("")
-    lines.extend(["## 2. Research cards", ""])
-    for index, (paper, summary, why) in enumerate(selected, 1):
-        theme = research_theme(paper)
-        details = full_results.get(paper["id"], ["**Assessment depth:** Abstract only."])
-        lines.extend([
-            f"### {index}. [{md(paper['title'])}]({paper['url']})", "",
-            f"**Theme:** {md(theme)} · **arXiv:** {md(paper['id'])} "
-            f"· **Submitted:** {md(paper['published'])}", "",
-            f"**Authors' contribution (abstract):** {md(summary)}", "",
-            f"**Potential application (interpretation):** {md(why)}", "",
-            "**Open question:** Do the reported conclusions generalise beyond the "
-            "authors' assumptions, datasets and evaluation setting?", "",
-            *details, "",
-            "---", "",
-        ])
-    lines.extend(["## 3. Comparative research matrix", ""])
+    lines.extend([
+        "**Evidence:** Bounded arXiv discovery, not exhaustive coverage or evidence "
+        "of a historical trend. Summaries reflect the authors' reported claims, "
+        "not independently replicated or verified results; applications are "
+        "interpretations. Evidence depth is shown per paper.", "",
+        "## 2. Research at a glance", "",
+    ])
     if selected:
         lines.extend([
-            "| Paper | Approach reported in assessment | Potential application | Evidence |",
-            "| --- | --- | --- | --- |",
+            "| Paper | Method / contribution | Why investigate |",
+            "| --- | --- | --- |",
         ])
         for paper, summary, why in selected:
-            details = full_results.get(paper["id"], [])
-            depth = ("Abstract only" if not details or any(
-                "abstract only" in line.lower() for line in details
-            ) else "Full-paper assessment")
             lines.append(
-                f"| [{compact(paper['title'], 65)}]({paper['url']}) "
-                f"| {compact(summary)} | {compact(why)} | {depth} |"
+                f"| [{compact(paper['title'], 60)}]({paper['url']}) "
+                f"| {compact(summary, 105)} | {compact(why, 105)} |"
             )
         lines.append("")
     else:
-        lines.extend(["No comparison is possible without shortlisted papers.", ""])
-    # Research opportunities are intentionally omitted until source-grounded,
-    # independently validated cross-paper hypotheses are available.
+        lines.extend(["No papers to compare this week.", ""])
+    lines.extend(["## 3. Research details", ""])
+    for index, (paper, summary, why) in enumerate(selected, 1):
+        depth = evidence_depth(paper["id"], full_results)
+        lines.extend([
+            f"### {index}. [{md(paper['title'])}]({paper['url']})", "",
+            f"**{md(research_theme(paper))}** · arXiv {md(paper['id'])} "
+            f"· {md(paper['published'])} · {depth}", "",
+            "| Field | Assessment |",
+            "| --- | --- |",
+            f"| **Finding / method** | {compact(summary, 650)} |",
+            f"| **Why investigate** | {compact(why, 650)} |",
+            "| **Open question** | Not established from the available assessment; "
+            "check the original paper's assumptions and limitations. |",
+        ])
+        # Preserve optional full-paper findings rather than silently discard them.
+        if paper["id"] in full_results:
+            lines.extend(["", *full_results[paper["id"]]])
+        lines.extend(["", "---", ""])
+    # Section 4 is omitted until source-grounded hypotheses are available.
     return "\n".join(lines)
+
 
 def atomic_write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
