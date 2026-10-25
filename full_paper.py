@@ -13,9 +13,9 @@ LABELS = ("author_reported", "verified_from_text", "unresolved")
 
 def extract_paper(paper_id, opener=urlopen):
     """Extract text from a bounded arXiv PDF; never misrepresent truncated evidence."""
-    from pypdf import PdfReader
     if not re.fullmatch(r"(?:[0-9]{4}\.[0-9]{4,5}|[A-Za-z.-]+/[0-9]{7})", paper_id):
         raise ValueError("Invalid arXiv identifier")
+    from pypdf import PdfReader
     request = Request("https://arxiv.org/pdf/" + paper_id,
                       headers={"User-Agent": "QuantFolio/1.1 (public research)"})
     with opener(request, timeout=35) as response:
