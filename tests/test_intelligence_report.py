@@ -42,7 +42,7 @@ class IntelligenceReportTests(unittest.TestCase):
         empty = render(self.today, [], 0, 0, "fixture", fetched_count=3)
         self.assertIn("**Retrieved:** 3", empty)
         self.assertIn("No new papers", empty)
-        self.assertIn("No comparison is possible", empty)
+        self.assertIn("No papers to compare", empty)
         self.assertNotIn("| Paper |", empty)
         one = render(self.today, self.selected[:1], 1, 1, "fixture", fetched_count=1)
         self.assertIn("too varied", one)
