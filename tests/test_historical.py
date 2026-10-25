@@ -1,8 +1,10 @@
 import datetime as dt
 import unittest
 from unittest.mock import patch
+from io import BytesIO
+import xml.etree.ElementTree as ET
 from pathlib import Path
-from historical import query_for_dates, build_report
+from historical import query_for_dates, build_report, fetch_historical
 from curate import candidates_for_run
 
 def paper(id, date):
@@ -35,4 +37,48 @@ class HistoricalTests(unittest.TestCase):
                 self.assertEqual(report.count("| **Finding / method** |"),len(selected))
                 self.assertIn("## 2. Research at a glance",report)
                 self.assertNotIn("## 4. Research opportunities",report)
+
+    def test_historical_pagination_and_inconsistent_totals(self):
+        ns = "http://www.w3.org/2005/Atom"
+        osns = "http://a9.com/-/spec/opensearch/1.1/"
+        def feed(ids, total):
+            root = ET.Element("{%s}feed" % ns)
+            ET.SubElement(root, "{%s}totalResults" % osns).text = str(total)
+            for id in ids:
+                e = ET.SubElement(root, "{%s}entry" % ns)
+                ET.SubElement(e, "{%s}id" % ns).text = "https://arxiv.org/abs/" + id
+                ET.SubElement(e, "{%s}title" % ns).text = "Portfolio forecasting"
+                ET.SubElement(e, "{%s}summary" % ns).text = "Portfolio market study"
+                ET.SubElement(e, "{%s}published" % ns).text = "2026-10-12T08:00:00Z"
+            return ET.tostring(root)
+        class Response:
+            def __init__(self, payload):
+                self.payload = payload
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self, cap):
+                return self.payload
+        first = ["2610.%05d" % i for i in range(100)]
+        second = ["2610.00100"]
+        calls = iter([feed(first, 101), feed(second, 101)])
+        def open_page(*args, **kwargs):
+            return Response(next(calls))
+        papers, raw = fetch_historical(dt.date(2026,10,12),
+                                       dt.date(2026,10,18),
+                                       opener=open_page, pause=lambda _: None)
+        self.assertEqual((len(papers), raw), (101, 101))
+        calls = iter([feed(first, 101), feed(second, 102)])
+        with self.assertRaisesRegex(ValueError, "inconsistent"):
+            fetch_historical(dt.date(2026,10,12), dt.date(2026,10,18),
+                             opener=open_page, pause=lambda _: None)
+
+    def test_report_discloses_version_and_simulation_limits(self):
+        report = Path("reports/2026-10-18.md").read_text(encoding="utf-8")
+        self.assertIn("ideal simulated arbitrageur", report)
+        self.assertIn("did not retain the input abstract payload/version", report)
+        self.assertIn("not independently verified", report)
+        self.assertNotIn("yielding 3.5% weekly risk-free returns", report)
+
 if __name__=="__main__": unittest.main()
