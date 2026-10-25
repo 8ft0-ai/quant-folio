@@ -101,16 +101,13 @@ def run(root):
         assert obs2["usage"] == {"prompt_tokens": 0, "completion_tokens": 0}
     # A truly exhausted input must produce a valid zero-candidate digest without inference.
     exhausted = args("exhausted")
-    shutil.copyfile(second.state, exhausted.state)
-    exhausted_seen = ids(exhausted.state)
+    exhausted_seen = {p["id"] for p in papers}\n    exhausted.state.write_text(json.dumps({"seen": sorted(exhausted_seen)}) + "\\n")
     with patch.object(curate, "fetch", return_value=papers), patch.object(
         curate, "request_assessment", side_effect=AssertionError("inference on exhausted input")
     ):
         exhausted_report = curate.execute(exhausted)
     exhausted_candidates, _ = curate.candidates_for_run(papers, exhausted_seen, today, 8, 10)
-    if not exhausted_candidates:
-        assert report_counts(exhausted_report) == (0, 0)
-        assert ids(exhausted.state) == exhausted_seen
+    assert not exhausted_candidates\n    assert report_counts(exhausted_report) == (0, 0)\n    assert ids(exhausted.state) == exhausted_seen
 
     third = args("run3")
     report_path = third.reports / (today.isoformat() + ".md")
