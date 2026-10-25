@@ -27,7 +27,7 @@ jobs:
       - name: Non-publishing real-service pilot
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3.5-super-vl:free' }}
+          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free' }}
         run: python curate.py --reports /tmp/quant-folio-reports --state /tmp/quant-folio-seen.json
       - uses: actions/upload-artifact@v4
         with:
@@ -52,7 +52,7 @@ jobs:
       - name: Assess and render
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3.5-super-vl:free' }}
+          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free' }}
         run: python curate.py
       - name: Atomic publication of digest and state
         run: |
