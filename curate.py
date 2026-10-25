@@ -180,7 +180,7 @@ def research_theme(paper):
 
 def compact(value, limit=130):
     """Bound table text without asserting more than the assessment says."""
-    value = md(value).replace("|", "&#124;").replace("\\n", " ")
+    value = md(value).replace("|", "&#124;").replace("\n", " ")
     if len(value) <= limit:
         return value
     return value[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,.;") + "…"
@@ -210,7 +210,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
     ]
     if not selected:
         lines.extend([
-            "No papers were shortlisted from this run. No themes or research "
+            "No new papers were recommended from this bounded search. No themes or research "
             "opportunities can be inferred from an empty selection.", "",
         ])
     else:
@@ -242,7 +242,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
             f"**Theme:** {md(theme)} · **arXiv:** {md(paper['id'])} "
             f"· **Submitted:** {md(paper['published'])}", "",
             f"**Authors' contribution (abstract):** {md(summary)}", "",
-            f"**Potential application (interpretation):** {md(why)}", "",
+            f"**Why read it: Potential application (interpretation):** {md(why)}", "",
             "**Open question:** Do the reported conclusions generalise beyond the "
             "authors' assumptions, datasets and evaluation setting?", "",
             *details, "",
@@ -267,7 +267,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
         lines.extend(["No comparison is possible without shortlisted papers.", ""])
     # Research opportunities are intentionally omitted until source-grounded,
     # independently validated cross-paper hypotheses are available.
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 def atomic_write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
