@@ -251,15 +251,18 @@ def execute(args):
                 raise RuntimeError(
                     f"Full-paper inference failed for {paper['id']}: "
                     f"{type(exc).__name__}") from None
+    # Only successfully assessed candidates are seen; unassessed papers remain eligible.
+    new_seen = (seen | {paper["id"] for paper in candidates}) - pending_ids
     report = render(args.today, selected, len(candidates), len(fresh),
                     args.model, full_results)
     target = args.reports / (args.today.isoformat() + ".md")
     # No files are changed before retrieval, assessment, and validation succeed.
-    # GitHub Actions commits both files together only after this command exits successfully.
+    # Local writes are atomic individually, not transactional across both paths.
+    # GitHub Actions commits both files together only after successful execution.
     atomic_write(target, report)
-    atomic_write(args.state, json.dumps({"seen": sorted((seen | fresh) - pending_ids)}, indent=2) + "\n")
+    atomic_write(args.state, json.dumps({"seen": sorted(new_seen)}, indent=2) + "\n")
     print(f"report={target} fetched={len(papers)} candidates={len(candidates)} "
-          f"recommendations={len(selected)} seen={len((seen | fresh) - pending_ids)} "
+          f"recommendations={len(selected)} seen={len(new_seen)} "
           f"pending_full_papers={len(pending_ids)} "
           f"prompt_tokens={total_prompt} "
           f"completion_tokens={total_completion}")
