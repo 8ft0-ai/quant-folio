@@ -49,7 +49,7 @@ class CurateTests(unittest.TestCase):
             second=execute(args)
             self.assertIn("Foreign Exchange Forecasting",first)
             self.assertIn("No new papers",second)
-            self.assertEqual(len(load_seen(args.state)),3)
+            self.assertEqual(load_seen(args.state), {p["id"] for p in self.candidates})
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder); args=self.arguments(root)
             args.ai_fixture.write_text('{"recommendations":[]}')
@@ -116,7 +116,7 @@ class CurateTests(unittest.TestCase):
                  patch("curate.extract_paper", side_effect=AssertionError("unexpected PDF extraction")):
                 output = execute(args)
             self.assertIn("Assessment depth:** Abstract only", output)
-            self.assertEqual(len(load_seen(args.state)), 3)
+            self.assertEqual(load_seen(args.state), {p["id"] for p in self.candidates})
 
     def test_live_assessment_failure_preserves_files(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -168,6 +168,16 @@ class CurateTests(unittest.TestCase):
         with patch("curate.request_assessment", side_effect=fake_assessment):
             with self.assertRaisesRegex(ValueError, "Unknown or duplicate"):
                 assess_batches(papers, 8, "test-model", "test-key")
+
+    def test_unassessed_candidates_remain_eligible(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            args = self.arguments(root)
+            args.ai_fixture = None
+            with patch("curate.fetch", return_value=self.papers), \
+                 patch("curate.request_assessment", return_value=(VALID, {})):
+                execute(args)
+            self.assertNotIn(self.papers[1]["id"], load_seen(args.state))
 
     def test_future_papers_excluded(self):
         result,_=candidates_for_run(self.papers,set(),dt.date(2026,10,20),8,24)
