@@ -27,16 +27,16 @@ class IntelligenceReportTests(unittest.TestCase):
     def test_complete_report_counts_and_links(self):
         report = render(self.today, self.selected, 2, 4, "fixture", fetched_count=11)
         self.assertIn("**Retrieved:** 11 · **New unique:** 4 · **AI-assessed:** 2 · **Shortlisted:** 2", report)
-        for heading in ("## 1. Executive briefing", "## 2. Research cards",
-                        "## 3. Comparative research matrix"):
+        for heading in ("## 1. Executive briefing", "## 2. Research at a glance",
+                        "## 3. Research details"):
             self.assertIn(heading, report)
         self.assertIn("Market microstructure (2 papers)", report)
         for entry, _, _ in self.selected:
             self.assertEqual(report.count("](" + entry["url"] + ")"), 3)
-        self.assertEqual(report.count("**Assessment depth:** Abstract only."), 2)
-        self.assertEqual(report.count("| Abstract only |"), 2)
+        self.assertEqual(report.count("· Abstract only"), 2)
+        self.assertEqual(report.count("| **Finding / method** |"), 2)
         self.assertNotIn("## 4. Research opportunities", report)
-        self.assertNotIn("historical trend", report.split("## 2. Research cards")[1])
+        self.assertNotIn("historical trend", report.split("## 3. Research details")[1])
 
     def test_empty_and_single_paper(self):
         empty = render(self.today, [], 0, 0, "fixture", fetched_count=3)
@@ -57,7 +57,7 @@ class IntelligenceReportTests(unittest.TestCase):
                             "**Assessment depth:** Full paper, 5 pages.",
                         ]}, fetched_count=1)
         self.assertIn("&#124;", output)
-        self.assertIn("| Full-paper assessment |", output)
+        self.assertIn("· Full-paper assessment", output)
         self.assertNotIn("## 4. Research opportunities", output)
 
 
