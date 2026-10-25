@@ -186,6 +186,28 @@ def compact(value, limit=130):
     return value[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,.;") + "…"
 
 
+def research_gap(paper):
+    """Question to investigate, not an assertion that the authors omitted testing."""
+    title = paper["title"].lower()
+    if "timegan" in title:
+        return "How sensitive are the conclusions to tail dependence in generated scenarios?"
+    if "diffusion" in title:
+        return "How does forecast calibration hold across different order-book regimes?"
+    if "state-space" in title:
+        return "Do the interpreted internal representations remain stable across securities?"
+    if "impact" in title:
+        return "Does simulated market impact remain plausible under different order sizes?"
+    if "decentralized" in title:
+        return "How sensitive is the liquidity model to changing volatility assumptions?"
+    if "trading filters" in title:
+        return "How sensitive are the filters to the assumed impact-decay kernel?"
+    if "statistical arbitrage" in title:
+        return "Does posterior calibration persist outside the reported market setting?"
+    if "range value-at-risk" in title:
+        return "How robust are the derived policies when investment assumptions change?"
+    return "Which assumptions most affect the proposed method's applicability?"
+
+
 def evidence_depth(paper_id, full_results):
     details = full_results.get(paper_id, [])
     if not details or any("abstract only" in line.lower() for line in details):
@@ -255,8 +277,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
             "| --- | --- |",
             f"| **Finding / method** | {compact(summary, 650)} |",
             f"| **Why investigate** | {compact(why, 650)} |",
-            "| **Open question** | Not established from the available assessment; "
-            "check the original paper's assumptions and limitations. |",
+            f"| **Open question** | {compact(research_gap(paper), 220)} |",
         ])
         # Preserve optional full-paper findings rather than silently discard them.
         if paper["id"] in full_results:
