@@ -1,43 +1,59 @@
 # Quant Folio
 
-Autonomous weekly quantitative-finance paper curation, using the existing arXiv scout and one configurable AI model.
+Bounded arXiv discovery, abstract triage, full-PDF extraction and evidence-labelled AI assessment using direct OpenRouter requests.
 
 ## Activation status
 
-**Not activated.** The research workflow is manual-only and non-publishing by default. There is no active weekly cron. Publication requires both a manual `publish` selection and repository variable `QUANT_FOLIO_ENABLED=true`, which must not be set before owner acceptance.
+**Not activated.** The workflow is manual-only. There is no weekly cron. Publication requires both manual `publish` selection and `QUANT_FOLIO_ENABLED=true`; neither should be enabled until separate owner approval.
 
-## How it works
+## Research pipeline
 
-`scout.py` preserves the original deterministic pilot. `curate.py` retrieves a bounded set of arXiv papers, filters previously processed IDs, ranks candidates by keywords, and sends at most 24 abstracts (truncated to 1,600 characters each) to one configured AI model. The response must contain a validated JSON shortlist of zero to eight known papers. Recommendations include abstract-based summaries, reasons for reading and explicit evidence limitations. No full text or independent experimental validation is implied.
+1. `scout.py` retrieves a bounded recent arXiv Atom feed and ranks candidates.
+2. `curate.py` sends up to 24 titles/abstracts to a free model and validates a shortlist of at most eight.
+3. `full_paper.py` downloads each shortlisted paper from public arXiv (12 MB and 100-page limits), extracts PDF text with `pypdf` and limits transmitted extracted text to 90,000 characters per paper.
+4. The same free model examines objective, methods, results, design, limitations, reproducibility and practical relevance. Each section contains a claim, source-evidence locator and evidence status. A text-visible claim is **not** independent validation.
+5. Unextractable PDFs are clearly marked **abstract only** and excluded from the processed-ID state so a future run can retry them. A malformed or failed model response aborts without changing report or state.
+6. Only after successful curation does the program stage a Markdown report and seen-state; the gated publication workflow commits the files together.
 
-Following successful assessment, the run writes a Markdown report to `reports/YYYY-MM-DD.md` and updated `data/seen.json`. In GitHub Actions these are **committed together in a single Git commit** after successful processing. Failed assessment makes no state changes; failed pushes are reported as workflow failures. The concurrency group prevents overlapping publication. Not every retrieved paper is assessed: the run is deliberately not exhaustive.
+Truncated extracted text is always labelled partial-text review; diagrams, equations, tables and figures that do not extract reliably are not independently inspected. A successfully extracted PDF is not equivalent to reproducing results.
 
-## Tests and pilots
+## Inference controls
+
+Only these explicit free endpoints can be selected:
+
+- `nvidia/nemotron-3.5-super-vl:free` (default; JSON mode available)
+- `nvidia/nemotron-3-ultra-550b-a55b:free` (JSON not enforced; strict local validation)
+- `google/gemma-4-26b-a4b-it:free` (JSON mode available)
+
+OpenRouter currently advertises zero per-token pricing for these endpoints; free quotas and upstream availability are not guaranteed. By design, one run makes at most one abstract-screening call and eight full-paper calls, with at most one retry on transient transport errors per call (up to 18 attempted HTTP requests). Each full-paper output is capped at 2,200 tokens; screening output at 2,600 tokens. Usage tokens are reported where available. Requests to non-allowlisted or paid models are rejected locally.
+
+**Data handling:** paper text is sent to OpenRouter and its upstream provider. The free NVIDIA endpoint states that submitted sessions may be logged and used for product improvement. Only public arXiv research should be submitted. Do not transmit private files or account data.
+
+## Local setup and tests
 
 ```sh
+python -m pip install 'pypdf>=5,<7'
 python -m unittest discover -s tests -v
-python scout.py --fixture tests/fixture.atom --today 2026-10-24 --state /tmp/scout-seen.json --reports /tmp/scout-reports
 ```
 
-The manually dispatched `Quant Folio research` workflow executes a live, non-publishing pilot in a temporary workspace and uploads the report as a short-lived GitHub Actions artifact.
-
-For a local real run without publication:
+For a live, non-publishing local pilot configure the secret in the execution environment, not in chat or Git:
 
 ```sh
-OPENAI_API_KEY=... python curate.py --reports /tmp/folio-reports --state /tmp/folio-state.json
+OPENROUTER_API_KEY=... python curate.py --reports /tmp/folio-reports --state /tmp/folio-state.json
 ```
 
-The credential must be provided securely via the execution environment; do not paste it into chat or commit it. The model defaults to `gpt-4o-mini`, configurable through `OPENAI_MODEL` locally or Actions variable `QUANT_FOLIO_MODEL`. The AI request is bounded to one call (up to three attempts for transient errors), maximum 2,600 completion tokens. Zero eligible candidates means no model call.
+Optional: set `OPENROUTER_MODEL` to an allowlisted free model. For GitHub Actions, configure repository secret `OPENROUTER_API_KEY` and optional variable `QUANT_FOLIO_MODEL`. Use a manual non-publishing workflow dispatch and inspect the uploaded report artefact.
 
-## Owner activation checklist
+## Acceptance still required
 
-1. Add `OPENAI_API_KEY` as a GitHub Actions repository secret and apply a small API-spending limit at the provider. Do not disclose the key.
-2. Run and inspect the manual non-publishing pilot.
-3. Verify repository Actions token write permission and actual `main` branch protection rules. No rulesets were visible at implementation time, but classic branch protection was not readable via this connection. Do not weaken protection to allow automation. If the protected branch rejects direct pushes, a separately accepted publication method is required.
-4. After separate owner acceptance, enable a weekly UTC `schedule` trigger for the publishing job and set `QUANT_FOLIO_ENABLED=true`. A cron conversion for Sydney must consider daylight saving.
+1. Confirm a functioning OpenRouter credential in the execution environment; do not put keys in a pull request or conversation.
+2. Read three representative quantitative-finance PDFs and compare the three free models against a human-reviewed evidence checklist, including leakage, costs and baselines. No benchmark-quality claims are made by model listings.
+3. Run manual non-publishing live-service verification and exact-head CI; inspect full-paper recommendations for unsupported claims and extraction omissions.
+4. Check Actions write permissions and actual branch protection without weakening protections. Publication might require a protected-branch-compatible alternative.
+5. Obtain separate owner authorisation before merging PR #2, enabling the weekly schedule or activating publication.
 
-No changes are made to `arxiv-quant-radar`.
+## Cost estimate
 
-## Cost envelope
+Model requests to the allowlisted free endpoints are advertised at **USD 0 per token**. For a full eight-paper weekly run, the theoretical endpoint charge is **USD 0**, subject to free capacity and account limits; this is not a guaranteed service-level commitment. Extraction runs on existing GitHub Actions infrastructure. No paid fallback is configured.
 
-24 candidate abstracts at up to 1,600 characters plus titles and instructions typically consume approximately 8,000–13,000 input tokens; output is capped at 2,600 tokens. Multiply by the configured provider's current input/output token rates to estimate cost. Transient failures can mean as many as three requests; usage is printed when supplied by the provider.
+No changes to `8ft0-ai/arxiv-quant-radar` or additional hosting are required.
