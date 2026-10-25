@@ -164,32 +164,126 @@ def md(text):
             .replace("]", "\\]").replace("*", "\\*").replace("`", "\\`"))
 
 
-def render(today, selected, candidates_count, fresh_count, model, full_results=None):
+def research_theme(paper):
+    """Conservative descriptive grouping from the paper title, not a quality score."""
+    title = paper["title"].lower()
+    if any(term in title for term in ("limit order book", "market microstructure", "market impact")):
+        return "Market microstructure"
+    if any(term in title for term in ("portfolio", "value-at-risk", "rachev")):
+        return "Portfolio and risk"
+    if any(term in title for term in ("filter", "statistical arbitrage", "predictive signal")):
+        return "Signals and filtering"
+    if any(term in title for term in ("liquidity", "decentralized exchange")):
+        return "Market liquidity"
+    return "Other quantitative research"
+
+
+def compact(value, limit=130):
+    """Bound table text without asserting more than the assessment says."""
+    value = md(value).replace("|", "&#124;").replace("\n", " ")
+    if len(value) <= limit:
+        return value
+    return value[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,.;") + "…"
+
+
+def research_gap(paper):
+    """Question to investigate, not an assertion that the authors omitted testing."""
+    title = paper["title"].lower()
+    if "timegan" in title:
+        return "How sensitive are the conclusions to tail dependence in generated scenarios?"
+    if "diffusion" in title:
+        return "How does forecast calibration hold across different order-book regimes?"
+    if "state-space" in title:
+        return "Do the interpreted internal representations remain stable across securities?"
+    if "impact" in title:
+        return "Does simulated market impact remain plausible under different order sizes?"
+    if "decentralized" in title:
+        return "How sensitive is the liquidity model to changing volatility assumptions?"
+    if "trading filters" in title:
+        return "How sensitive are the filters to the assumed impact-decay kernel?"
+    if "statistical arbitrage" in title:
+        return "Does posterior calibration persist outside the reported market setting?"
+    if "range value-at-risk" in title:
+        return "How robust are the derived policies when investment assumptions change?"
+    return "Which assumptions most affect the proposed method's applicability?"
+
+
+def evidence_depth(paper_id, full_results):
+    details = full_results.get(paper_id, [])
+    if not details or any("abstract only" in line.lower() for line in details):
+        return "Abstract only"
+    return "Full-paper assessment"
+
+
+def render(today, selected, candidates_count, fresh_count, model, full_results=None,
+           fetched_count=None):
     full_results = full_results or {}
+    fetched = str(fetched_count) if fetched_count is not None else "Not recorded"
+    themes = {}
+    for paper, _, _ in selected:
+        category = research_theme(paper)
+        themes[category] = themes.get(category, 0) + 1
+    repeated = [category for category, count in themes.items() if count >= 2]
     lines = [
-        f"# Quant Folio — {today.isoformat()}", "",
-        "**Evidence boundary:** abstract only when PDF evidence is unavailable; extracted PDF assessment otherwise. "
-        "Reported experiments and performance claims were **not independently replicated or verified**.",
-        "Search is bounded to selected arXiv quantitative-finance categories and is not exhaustive.",
-        f"**Assessment:** {md(model) if candidates_count else 'not required (no eligible candidates)'} "
-        "· **Source:** arXiv Atom metadata and abstracts", "",
+        f"# Quant Folio — Research intelligence briefing · {today.isoformat()}", "",
+        "## 1. Executive briefing", "",
+        f"**Retrieved:** {fetched} · **New unique:** {fresh_count} · "
+        f"**AI-assessed:** {candidates_count} · **Shortlisted:** {len(selected)}", "",
     ]
     if not selected:
         lines.extend(["No new papers were recommended from this bounded search.", ""])
-    for index, (paper, summary, why) in enumerate(selected, 1):
-        lines.extend([
-            f"## {index}. [{md(paper['title'])}]({paper['url']})",
-            f"**arXiv:** {paper['id']} · **Submitted:** {paper['published']}",
-            "**Evidence examined:** arXiv abstract and full-paper status below.",
-            f"**Abstract-based summary:** {md(summary)}",
-            f"**Why read it:** {md(why)}",
-            "**Validation:** Authors' experimental findings are not independently replicated.",
-            *full_results.get(paper["id"], ["**Assessment depth:** Abstract only."]), "",
-        ])
+    else:
+        if repeated:
+            lines.extend([
+                "**Themes in this shortlist:** " + "; ".join(
+                    f"{md(category)} ({themes[category]} papers)"
+                    for category in repeated[:3]
+                ) + ".", "",
+            ])
+        else:
+            lines.extend(["The selection is too varied to infer a recurring theme.", ""])
+        lines.extend(["**Investigate first (shortlist order, not a quality ranking):**", ""])
+        for paper, _, _ in selected[:3]:
+            lines.append(f"- [{md(paper['title'])}]({paper['url']})")
+        lines.append("")
     lines.extend([
-        f"**New unique papers:** {fresh_count} · **AI-assessed candidates:** {candidates_count} "
-        f"· **Recommended:** {len(selected)}", "",
+        "**Evidence:** Bounded arXiv discovery, not exhaustive coverage or evidence "
+        "of a historical trend. Summaries reflect the authors' reported claims, "
+        "not independently replicated or verified results; applications are "
+        "interpretations. Evidence depth is shown per paper.", "",
+        "## 2. Research at a glance", "",
     ])
+    if selected:
+        lines.extend([
+            "| Paper | Method / contribution | Why investigate |",
+            "| --- | --- | --- |",
+        ])
+        for paper, summary, why in selected:
+            lines.append(
+                f"| [{compact(paper['title'], 60)}]({paper['url']}) "
+                f"| {compact(summary, 105)} | {compact(why, 105)} |"
+            )
+        lines.append("")
+    else:
+        lines.extend(["No papers to compare this week.", ""])
+    lines.extend(["## 3. Research details", ""])
+    for index, (paper, summary, why) in enumerate(selected, 1):
+        depth = evidence_depth(paper["id"], full_results)
+        lines.extend([
+            f"### {index}. [{md(paper['title'])}]({paper['url']})", "",
+            f"**{md(research_theme(paper))}** · arXiv {md(paper['id'])} "
+            f"· {md(paper['published'])} · {depth}", "",
+            "| Field | Assessment |",
+            "| --- | --- |",
+            f"| **Finding / method** | {compact(summary, 650)} |",
+            f"| **Why investigate** | {compact(why, 650)} |",
+            f"| **Open question** | {compact(research_gap(paper), 220)} |",
+        ])
+        # Preserve optional full-paper findings rather than silently discard them.
+        if paper["id"] in full_results:
+            lines.extend(["", *full_results[paper["id"]]])
+        lines.extend(["", "---", ""])
+    # Section 4 is omitted until source-grounded hypotheses are available.
     return "\n".join(lines)
 
 
@@ -254,7 +348,7 @@ def execute(args):
     # Only successfully assessed candidates are seen; unassessed papers remain eligible.
     new_seen = (seen | {paper["id"] for paper in candidates}) - pending_ids
     report = render(args.today, selected, len(candidates), len(fresh),
-                    args.model, full_results)
+                    args.model, full_results, fetched_count=len(papers))
     target = args.reports / (args.today.isoformat() + ".md")
     # No files are changed before retrieval, assessment, and validation succeed.
     # Local writes are atomic individually, not transactional across both paths.

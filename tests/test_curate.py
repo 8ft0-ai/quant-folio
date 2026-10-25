@@ -28,9 +28,9 @@ class CurateTests(unittest.TestCase):
     def test_abstract_evidence(self):
         selected=validate_assessment(VALID,self.candidates,8)
         report=render(self.today,selected,1,3,"fixture-model")
-        self.assertIn("abstract only",report)
-        self.assertIn("not independently",report)
-        self.assertIn("Why read it:",report)
+        self.assertIn("Abstract only",report)
+        self.assertIn("not independently replicated",report)
+        self.assertIn("Why investigate",report)
 
     def test_invalid_results_fail(self):
         for value in [
@@ -115,7 +115,7 @@ class CurateTests(unittest.TestCase):
                  patch("curate.request_assessment", return_value=(VALID, {"prompt_tokens": 10, "completion_tokens": 20})), \
                  patch("curate.extract_paper", side_effect=AssertionError("unexpected PDF extraction")):
                 output = execute(args)
-            self.assertIn("Assessment depth:** Abstract only", output)
+            self.assertIn("· Abstract only", output)
             self.assertEqual(load_seen(args.state), {p["id"] for p in self.candidates})
 
     def test_live_assessment_failure_preserves_files(self):
