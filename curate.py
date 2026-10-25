@@ -203,7 +203,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
         f"**AI-assessed:** {candidates_count} · **Shortlisted:** {len(selected)}", "",
         "**Evidence and scope:** This is a bounded selection from arXiv quantitative-finance "
         "categories, not exhaustive field coverage or a historical trend analysis. "
-        "Summaries describe authors' abstract-level claims; practical applications are "
+        "Summaries describe authors' claims (abstract only unless marked otherwise); practical applications are "
         "Quant Folio interpretations, not verified outcomes. Experimental results have "
         "not been independently replicated or verified. Optional full-paper assessments "
         "are identified individually.", "",
@@ -255,9 +255,10 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
             "| --- | --- | --- | --- |",
         ])
         for paper, summary, why in selected:
-            depth = "Full-paper assessment" if paper["id"] in full_results and any(
-                "Full-paper" in line or "PDF" in line for line in full_results[paper["id"]]
-            ) and not any("Abstract only" in line for line in full_results[paper["id"]]) else "Abstract only"
+            details = full_results.get(paper["id"], [])
+            depth = ("Abstract only" if not details or any(
+                "abstract only" in line.lower() for line in details
+            ) else "Full-paper assessment")
             lines.append(
                 f"| [{compact(paper['title'], 65)}]({paper['url']}) "
                 f"| {compact(summary)} | {compact(why)} | {depth} |"
