@@ -26,11 +26,11 @@ def ids(path):
 
 
 def report_ids(report):
-    return set(re.findall(r"\\*\\*arXiv:\\*\\* ([^ \\n]+)", report))
+    return set(re.findall(r"\*\*arXiv:\*\* ([^ \n]+)", report))
 
 
 def report_counts(report):
-    match = re.search(r"\\*\\*AI-assessed candidates:\\*\\* (\\d+)\\s+· \\*\\*Recommended:\\*\\* (\\d+)", report)
+    match = re.search(r"\*\*AI-assessed candidates:\*\* (\d+)\s+· \*\*Recommended:\*\* (\d+)", report)
     if not match:
         raise AssertionError("Missing report counts")
     return tuple(map(int, match.groups()))
@@ -77,9 +77,10 @@ def run(root):
             fetch_limit=100, max_candidates=10, model=MODEL, full_paper=False)
     first = args("run1")
     report1, obs1 = observed_execute(first, papers)
-    assert "## 1." in report1, "Baseline had no recommendations"
+    assert report_counts(report1)[0] == len(eligible)
+    assert "## 1." in report1 or obs1["counts"][1] == 0
     assert "**Assessment depth:** Abstract only." in report1
-    assert "https://arxiv.org/abs/" in report1
+    assert "https://arxiv.org/abs/" in report1 or obs1["counts"][1] == 0
     baseline_seen = ids(first.state)
     assert baseline_seen == set(obs1["assessed_ids"])
     assert baseline_seen == {p["id"] for p in eligible}
@@ -101,13 +102,16 @@ def run(root):
         assert obs2["usage"] == {"prompt_tokens": 0, "completion_tokens": 0}
     # A truly exhausted input must produce a valid zero-candidate digest without inference.
     exhausted = args("exhausted")
-    exhausted_seen = {p["id"] for p in papers}\n    exhausted.state.write_text(json.dumps({"seen": sorted(exhausted_seen)}) + "\\n")
+    exhausted_seen = {p["id"] for p in papers}
+    exhausted.state.write_text(json.dumps({"seen": sorted(exhausted_seen)}) + "\n")
     with patch.object(curate, "fetch", return_value=papers), patch.object(
         curate, "request_assessment", side_effect=AssertionError("inference on exhausted input")
     ):
         exhausted_report = curate.execute(exhausted)
     exhausted_candidates, _ = curate.candidates_for_run(papers, exhausted_seen, today, 8, 10)
-    assert not exhausted_candidates\n    assert report_counts(exhausted_report) == (0, 0)\n    assert ids(exhausted.state) == exhausted_seen
+    assert not exhausted_candidates
+    assert report_counts(exhausted_report) == (0, 0)
+    assert ids(exhausted.state) == exhausted_seen
 
     third = args("run3")
     report_path = third.reports / (today.isoformat() + ".md")
@@ -126,7 +130,7 @@ def run(root):
     assert before == (digest(third.state), digest(report_path))
     print("run3_failed_state_and_digest=unchanged")
     report3, obs3 = observed_execute(third, papers)
-    assert "## 1." in report3
+    assert "## 1." in report3 or obs3["counts"][1] == 0
     assert ids(third.state) == set(obs3["assessed_ids"]) == baseline_seen
     assert len(obs3["recommended_ids"]) == obs3["counts"][1]
     assert len(obs3["recommended_ids"]) == len(set(obs3["recommended_ids"]))

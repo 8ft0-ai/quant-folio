@@ -1,8 +1,5 @@
 name: Quant Folio operational acceptance
 on:
-  push:
-    branches:
-      - acceptance/three-run-operational
   workflow_dispatch:
 # Acceptance only. No schedule, publication, repository writes, or paid fallback.
 permissions:
