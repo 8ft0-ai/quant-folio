@@ -132,7 +132,7 @@ def render(today, selected, candidates_count, fresh_count, model, full_results=N
     full_results = full_results or {}
     lines = [
         f"# Quant Folio — {today.isoformat()}", "",
-        "**Evidence boundary:** Abstract only when PDF evidence is unavailable; extracted PDF assessment otherwise. "
+        "**Evidence boundary:** abstract only when PDF evidence is unavailable; extracted PDF assessment otherwise. "
         "Reported experiments and performance claims were **not independently replicated or verified**.",
         "Search is bounded to selected arXiv quantitative-finance categories and is not exhaustive.",
         f"**Assessment:** {md(model) if candidates_count else 'not required (no eligible candidates)'} "
@@ -189,6 +189,7 @@ def execute(args):
     else:
         selected = []
     full_results = {}
+    pending_ids = set()
     total_prompt = usage.get("prompt_tokens", 0) or 0
     total_completion = usage.get("completion_tokens", 0) or 0
     if not args.ai_fixture:
@@ -196,6 +197,7 @@ def execute(args):
             try:
                 extracted, pages, truncated = extract_paper(paper["id"])
             except (ValueError, OSError, TimeoutError, URLError, HTTPError) as exc:
+                pending_ids.add(paper["id"])
                 full_results[paper["id"]] = [
                     "**Assessment depth:** Abstract only — PDF extraction unavailable "
                     f"({type(exc).__name__}); full-paper claims not assessed."
@@ -220,9 +222,10 @@ def execute(args):
     # No files are changed before retrieval, assessment, and validation succeed.
     # GitHub Actions commits both files together only after this command exits successfully.
     atomic_write(target, report)
-    atomic_write(args.state, json.dumps({"seen": sorted(seen | fresh)}, indent=2) + "\n")
+    atomic_write(args.state, json.dumps({"seen": sorted((seen | fresh) - pending_ids)}, indent=2) + "\n")
     print(f"report={target} fetched={len(papers)} candidates={len(candidates)} "
-          f"recommendations={len(selected)} seen={len(seen | fresh)} "
+          f"recommendations={len(selected)} seen={len((seen | fresh) - pending_ids)} "
+          f"pending_full_papers={len(pending_ids)} "
           f"prompt_tokens={total_prompt} "
           f"completion_tokens={total_completion}")
     return report
