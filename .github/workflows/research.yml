@@ -22,11 +22,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - run: python -m pip install 'pypdf>=5,<7'
       - run: python -m unittest discover -s tests -v
       - name: Non-publishing real-service pilot
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'gpt-4o-mini' }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3.5-super-vl:free' }}
         run: python curate.py --reports /tmp/quant-folio-reports --state /tmp/quant-folio-seen.json
       - uses: actions/upload-artifact@v4
         with:
@@ -46,11 +47,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - run: python -m pip install 'pypdf>=5,<7'
       - run: python -m unittest discover -s tests -v
       - name: Assess and render
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'gpt-4o-mini' }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.QUANT_FOLIO_MODEL || 'nvidia/nemotron-3.5-super-vl:free' }}
         run: python curate.py
       - name: Atomic publication of digest and state
         run: |
