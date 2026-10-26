@@ -33,6 +33,30 @@ class V2Tests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 output_paths(dt.date(2026,10,11),Path(root)/"2026-10-25.md")
 
+    def test_manual_workflow_isolates_existing_report(self):
+        # A checked-in pilot report must not block another manual invocation.
+        workflow = (Path(__file__).resolve().parents[1] /
+                    ".github/workflows/historical-backfill.yml").read_text()
+        self.assertIn('python historical.py --week-ending "$WEEK_ENDING" --output "$OUTPUT_DIR/$WEEK_ENDING.md"', workflow)
+        self.assertIn('mkdir -p "$OUTPUT_DIR"', workflow)
+        self.assertIn('runner.temp', workflow)
+        self.assertIn('github.run_id', workflow)
+        self.assertIn('github.run_attempt', workflow)
+        self.assertNotIn('            reports/${{ inputs.week-ending }}.md', workflow)
+        with TemporaryDirectory() as root:
+            root = Path(root)
+            checkout = root / "reports" / "2026-10-11.md"
+            checkout.parent.mkdir()
+            checkout.write_text("existing checked-in report")
+            separate = root / "runner-temp" / "run-123" / "2026-10-11.md"
+            output, manifest = output_paths(dt.date(2026, 10, 11), separate)
+            write_pair_new(output, manifest, "fresh", {"schema": "test"})
+            self.assertEqual(checkout.read_text(), "existing checked-in report")
+            self.assertEqual(output.read_text(), "fresh")
+            self.assertTrue(manifest.exists())
+            with self.assertRaises(FileExistsError):
+                output_paths(dt.date(2026, 10, 11), separate)
+
     def test_manifest_checksums_and_order(self):
         p = {"id":"2610.00001","source_id":"https://arxiv.org/abs/2610.00001v2",
              "source_version":"2","updated":"2026-10-11T00:00:00Z",
