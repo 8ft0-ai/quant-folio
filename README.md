@@ -75,3 +75,38 @@ OPENROUTER_API_KEY=... python historical.py --output /tmp/quant-folio-history/20
 ```
 
 It searches arXiv `submittedDate:[202610120000 TO 202610182359]` (UTC) across the existing q-fin.TR/PM/ST/CP/MF categories, paginates in ascending submission order (100 per page, capped at 2,000 results), refuses incomplete retrieval and deduplicates the response by arXiv ID. It assesses up to 24 relevance-ranked abstracts via the normal five-paper/three-recommendation free Nemotron batching and recommends at most eight. It does **not** read or write `data/seen.json` or invoke the weekly publication workflow; the output is an explicit caller-supplied path. A later arXiv query is not a contemporaneous snapshot: indexed versions, withdrawals and category assignments may change. The included report is a bounded retrospective research briefing, not an independently verified performance study. Never point `--output` at an existing publication.
+
+## Historical backfill V2 — manual repeatable procedure (Issue #9)
+
+Run a completed UTC Sunday-ending week from a clean checkout or a new report output directory:
+
+```sh
+python -m unittest discover -s tests -v
+python historical.py --week-ending 2026-10-11
+```
+
+Set `OPENROUTER_API_KEY` in your environment before running live inference; do not put
+credentials in commands, repository files or the manifest. The fixed, approved model
+is Nemotron 3 Ultra free. The report and provenance file are written as
+`reports/YYYY-MM-DD.md` and `reports/YYYY-MM-DD.provenance.json`.
+An existing output, including a symlink or manifest, is refused. To regenerate,
+use a new directory with `--output /tmp/new-directory/YYYY-MM-DD.md`, retaining
+the earlier pair for review. Both outputs are non-published drafts.
+
+On GitHub select **Actions → Historical research backfill (manual) → Run workflow**,
+enter a completed Sunday under `week-ending`, and select **Run workflow**.
+The workflow runs tests and the same CLI, and uploads review artefacts for 30
+days. It has read-only permissions, no schedule, no commit/push step, and never
+reads or writes production `data/seen.json` or invokes the weekly publication
+workflow. GitHub-hosted inference consumes Actions minutes and the configured
+free-model quota; use Voyager if these resources are constrained.
+
+The manifest records UTC retrieval time, the exact submittedDate query, pagination
+caps, retrieved and filtered counts, normalised abstract SHA-256, canonically
+serialised source metadata SHA-256, model limits, candidate identities and the
+UTF-8 report SHA-256. Paper ordering is sorted by ID; eligibility lists are
+sorted and assessment order preserves ranked candidate order. Repeated executions
+are not byte-identical: live index revisions, withdrawals, model responses and
+the retrieval timestamp may differ. It is *not* an immutable source snapshot and
+does not establish what arXiv showed during the historical reporting week.
+A failed inference must not produce a report or update production state.
