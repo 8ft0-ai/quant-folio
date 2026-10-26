@@ -25,13 +25,16 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           WEEK_ENDING: ${{ inputs.week-ending }}
-        run: python historical.py --week-ending "$WEEK_ENDING"
+          OUTPUT_DIR: ${{ runner.temp }}/historical-backfill-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          mkdir -p "$OUTPUT_DIR"
+          python historical.py --week-ending "$WEEK_ENDING" --output "$OUTPUT_DIR/$WEEK_ENDING.md"
       - uses: actions/upload-artifact@v4
         if: success()
         with:
           name: historical-backfill-${{ inputs.week-ending }}
           path: |
-            reports/${{ inputs.week-ending }}.md
-            reports/${{ inputs.week-ending }}.provenance.json
+            ${{ runner.temp }}/historical-backfill-${{ github.run_id }}-${{ github.run_attempt }}/${{ inputs.week-ending }}.md
+            ${{ runner.temp }}/historical-backfill-${{ github.run_id }}-${{ github.run_attempt }}/${{ inputs.week-ending }}.provenance.json
           if-no-files-found: error
           retention-days: 30
