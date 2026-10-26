@@ -2,6 +2,8 @@
 """One-week isolated historical backfill; never uses production publication state."""
 import argparse
 import datetime as dt
+import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -10,8 +12,8 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import xml.etree.ElementTree as ET
 
-from scout import API, SEARCH, parse_atom
-from curate import DEFAULT_MODEL, candidates_for_run, assess_batches, render, atomic_write
+from scout import API, SEARCH, ATOM, parse_atom
+from curate import DEFAULT_MODEL, BATCH_SIZE, BATCH_RECOMMENDATIONS, MAX_ABSTRACT, MAX_RESPONSE_TOKENS, candidates_for_run, assess_batches, render
 
 OS = "{http://a9.com/-/spec/opensearch/1.1/}"
 PAGE = 100
@@ -46,7 +48,12 @@ def fetch_historical(start, end, opener=urlopen, pause=time.sleep):
         if source_entries != len(entries):
             raise ValueError("Unparseable arXiv source entries; refusing incomplete coverage")
         fetched_raw += source_entries
-        for paper in entries:
+        for paper, entry in zip(entries, root.findall(ATOM + "entry")):
+            source_id = (entry.findtext(ATOM + "id") or "").strip()
+            paper["source_id"] = source_id
+            paper["source_version"] = (re.search(r"v(\d+)$", source_id).group(1)
+                                       if re.search(r"v(\d+)$", source_id) else None)
+            paper["updated"] = (entry.findtext(ATOM + "updated") or "").strip() or None
             if not start <= dt.date.fromisoformat(paper["published"]) <= end:
                 raise ValueError("arXiv returned paper outside submitted-date coverage")
             unique.setdefault(paper["id"], paper)
@@ -77,34 +84,124 @@ def build_report(papers, retrieved, start, end, generation_date, selected):
     report = report.replace("## 1. Executive briefing", header + "\n## 1. Executive briefing", 1)
     return report
 
+def reporting_week(ending, now=None):
+    """Validate a finished UTC Monday–Sunday research week."""
+    today = now or dt.datetime.now(dt.timezone.utc).date()
+    if ending.weekday() != 6:
+        raise ValueError("week ending must be Sunday")
+    if ending >= today:
+        raise ValueError("week must be completed before today (UTC)")
+    if ending < dt.date(1991, 1, 6):
+        raise ValueError("week predates arXiv")
+    return ending - dt.timedelta(days=6), ending
+
+
+def output_paths(ending, output=None):
+    """Protect all existing outputs; allow only the canonical report basename."""
+    canonical = f"{ending.isoformat()}.md"
+    report = Path(output) if output else Path("reports") / canonical
+    if report.name != canonical or report.is_symlink():
+        raise ValueError("output must be a non-symlink canonical weekly report filename")
+    manifest = report.with_suffix(".provenance.json")
+    if manifest.is_symlink() or report.exists() or manifest.exists():
+        raise FileExistsError("historical output already exists; use an empty output directory")
+    return report, manifest
+
+
+def sha256(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def provenance(papers, retrieved, start, end, timestamp, candidates, eligible_ids,
+               selected, report):
+    """Canonical ordered JSON content; retrieval timestamp is intentionally variable."""
+    records = []
+    for p in sorted(papers, key=lambda x: x["id"]):
+        abstract = p["abstract"].encode("utf-8")
+        metadata = {k: p.get(k) for k in
+                    ("id", "source_id", "source_version", "updated", "published", "title", "url")}
+        records.append({**metadata, "metadata_sha256": sha256(
+            json.dumps(metadata, sort_keys=True, ensure_ascii=False,
+                       separators=(",", ":")).encode("utf-8")),
+                        "abstract_sha256": sha256(abstract)})
+    return {
+        "schema": "quant-folio-historical-provenance-v2",
+        "coverage": {"start_utc": start.isoformat(), "end_utc": end.isoformat(),
+                     "inclusive": True},
+        "retrieved_at_utc": timestamp.isoformat().replace("+00:00", "Z"),
+        "source": {"api": API, "query": query_for_dates(start, end),
+                   "sort_by": "submittedDate", "sort_order": "ascending",
+                   "page_size": PAGE, "max_results": MAX_RETRIEVED,
+                   "limitations": "Current mutable arXiv index; not an immutable historical snapshot. Source versions are recorded only where returned by Atom."},
+        "counts": {"retrieved": retrieved, "unique": len(papers),
+                   "eligible": len(eligible_ids), "assessed": len(candidates),
+                   "recommended": len(selected)},
+        "papers": records,
+        "eligible_ids": sorted(eligible_ids),
+        "assessed_ids": [p["id"] for p in candidates],
+        "recommended_ids": [p["id"] for p, _, _ in selected],
+        "assessment": {"model": DEFAULT_MODEL, "temperature": 0,
+                       "batch_size": BATCH_SIZE,
+                       "batch_recommendations": BATCH_RECOMMENDATIONS,
+                       "maximum_assessed": 24, "maximum_recommended": 8,
+                       "maximum_abstract_chars": MAX_ABSTRACT,
+                       "maximum_response_tokens": MAX_RESPONSE_TOKENS,
+                       "reasoning_effort": "low"},
+        "report_sha256": sha256(report.encode("utf-8")),
+        "checksum_encoding": "UTF-8 SHA-256; metadata canonical JSON with sorted keys and compact separators; abstracts as received after parse_atom whitespace normalisation."
+    }
+
+
+def write_pair_new(report_path, manifest_path, report, manifest):
+    """Exclusive new-file writes; existing outputs are never overwritten."""
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    payloads = ((report_path, report), (manifest_path, json.dumps(
+        manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n"))
+    created = []
+    try:
+        for path, content in payloads:
+            with path.open("x", encoding="utf-8") as target:
+                created.append(path)
+                target.write(content)
+    except BaseException:
+        for path in created:
+            path.unlink()
+        raise
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=dt.date.fromisoformat, default=dt.date(2026, 10, 12))
-    parser.add_argument("--end", type=dt.date.fromisoformat, default=dt.date(2026, 10, 18))
-    parser.add_argument("--output", type=Path, default=Path("reports/2026-10-18.md"))
+    parser = argparse.ArgumentParser(description="Isolated manual historical research backfill")
+    parser.add_argument("--week-ending", required=True, type=dt.date.fromisoformat,
+                        help="completed Sunday YYYY-MM-DD (UTC)")
+    parser.add_argument("--output", type=Path, help="optional canonical report path in a new directory")
     args = parser.parse_args()
-    if (args.start, args.end) != (dt.date(2026,10,12), dt.date(2026,10,18)):
-        parser.error("V1 is fixed to 12–18 October 2026")
-    if args.output.resolve() == Path("reports/2026-10-25.md").resolve():
-        parser.error("cannot overwrite production report")
-    papers, retrieved = fetch_historical(args.start, args.end)
-    candidates, eligible_ids = candidates_for_run(papers, set(), args.end, 6, 24)
+    try:
+        start, end = reporting_week(args.week_ending)
+        output, manifest_path = output_paths(end, args.output)
+    except (ValueError, FileExistsError) as exc:
+        parser.error(str(exc))
+    papers, retrieved = fetch_historical(start, end)
+    candidates, eligible_ids = candidates_for_run(papers, set(), end, 6, 24)
     if candidates:
         selected, usage = assess_batches(candidates, 8, DEFAULT_MODEL,
                                           os.environ.get("OPENROUTER_API_KEY"))
     else:
         selected, usage = [], {}
-    generation = dt.datetime.now(dt.timezone.utc).date()
-    report = build_report(papers, retrieved, args.start, args.end, generation, selected)
-    # Validate all links and IDs before any output.
+    timestamp = dt.datetime.now(dt.timezone.utc)
+    report = build_report(papers, retrieved, start, end, timestamp.date(), selected)
     for paper, _, _ in selected:
-        assert paper["url"] == "https://arxiv.org/abs/" + paper["id"]
-        assert report.count("](" + paper["url"] + ")") >= 2
-    atomic_write(args.output, report)
+        if paper["url"] != "https://arxiv.org/abs/" + paper["id"]:
+            raise ValueError("Invalid selected source identity")
+        if report.count("](" + paper["url"] + ")") < 2:
+            raise ValueError("Report omits selected source links")
+    manifest = provenance(papers, retrieved, start, end, timestamp, candidates,
+                          eligible_ids, selected, report)
+    write_pair_new(output, manifest_path, report, manifest)
+    print(f"report={output} provenance={manifest_path}")
     print(f"retrieved={retrieved} eligible={len(eligible_ids)} assessed={len(candidates)} "
           f"recommended={len(selected)} prompt_tokens={usage.get('prompt_tokens',0)} "
           f"completion_tokens={usage.get('completion_tokens',0)}")
-    print("recommended_ids=" + ",".join(p["id"] for p,_,_ in selected))
+    print("recommended_ids=" + ",".join(p["id"] for p, _, _ in selected))
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,37 @@
+name: Historical research backfill (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      week-ending:
+        description: Completed Sunday YYYY-MM-DD (UTC)
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  historical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'pypdf>=5,<7'
+      - run: python -m unittest discover -s tests -v
+      - name: Non-publishing backfill
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          WEEK_ENDING: ${{ inputs.week-ending }}
+        run: python historical.py --week-ending "$WEEK_ENDING"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: historical-backfill-${{ inputs.week-ending }}
+          path: |
+            reports/${{ inputs.week-ending }}.md
+            reports/${{ inputs.week-ending }}.provenance.json
+          if-no-files-found: error
+          retention-days: 30
