@@ -110,3 +110,22 @@ are not byte-identical: live index revisions, withdrawals, model responses and
 the retrieval timestamp may differ. It is *not* an immutable source snapshot and
 does not establish what arXiv showed during the historical reporting week.
 A failed inference must not produce a report or update production state.
+
+
+## ChatGPT editorial research briefing (Issue #11)
+
+The read-only, version-controlled [Research Briefing V1 skill](skills/research-briefing/SKILL.md) turns an **existing** report into a ChatGPT editorial briefing. This is not a research pipeline, scheduler or automatically registered ChatGPT slash command.
+
+For a **fresh ChatGPT session**, paste the complete [standalone prompt](skills/research-briefing/PROMPT.md) and, if desired, change the date and project focus. Use natural language such as "Brief Quant Folio's latest non-draft edition, focusing on TradeLab". Connect GitHub or use public GitHub retrieval to inspect the actual report first. A repository skill file is documentation until explicitly installed/registered on a supporting client.
+
+The optional no-dependency source validator pins the `main` commit and produces a validated, read-only input manifest:
+
+```sh
+python briefing_source.py
+python briefing_source.py --date 2026-10-25 --focus TradeLab
+python -m unittest discover -s tests -v
+```
+
+It requires read access to the public GitHub API, never retrieves papers from arXiv and does not write repo files or execute model inference. Reports marked historical/non-published draft are skipped when requesting "latest"; a date can explicitly select one with a visible draft warning. A report more than eight days old is marked stale. Unrecorded counts remain unknown; GitHub source or content-integrity failures block the briefing. Main-branch presence alone does not establish that a scheduled publication ran.
+
+[Verified 25 October 2026 editorial example](skills/research-briefing/example-2026-10-25.md) — the sample report was retrospectively formatted, with eight abstract-only recommendations and no recorded retrieved count.
