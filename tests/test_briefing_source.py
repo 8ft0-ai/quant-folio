@@ -36,7 +36,7 @@ def fake_source(content=None, files=None, overrides=None):
             name = url[len(prefix):].split(".md?", 1)[0]
             if name not in files:
                 raise SourceError(f"Missing source: {name}")
-            report_text = overrides.get(name, content if name == "2026-10-25" else report(name))
+            report_text = overrides[name] if name in overrides else (content if name == "2026-10-25" else report(name))
             return {
                 "encoding": "base64",
                 "sha": "44a4a0bea1aca480af6261c31b1e399cced3a2d4",
@@ -67,7 +67,7 @@ class BriefingSourceTests(unittest.TestCase):
         self.assertTrue(all(p["finding"] and p["relevance"] and p["open_question"]
                             for p in m["papers"]))
         self.assertIn("not a new assessment", " ".join(m["warnings"]))
-        self.assertIn("unverified", " ".join(m["warnings"]))
+        self.assertIn("not live-checked", " ".join(m["warnings"]))
         self.assertEqual(len(m["sha256"]), 64)
 
     def test_latest_pinned_main_retrieval_and_explicit_focus(self):
