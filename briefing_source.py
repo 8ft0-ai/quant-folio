@@ -152,21 +152,26 @@ def retrieve_report(date=None, as_of=None, focus=None, get=github_json):
     dates = sorted(m.group(1) for f in listing if (m := REPORT_PATH.fullmatch(f.get("path", ""))))
     if not dates:
         raise SourceError("No Markdown research reports found on main")
-    target = date or dates[-1]
-    _date(target)
-    if target not in dates:
-        raise SourceError(f"Report {target} not found on main; do not substitute another edition")
-    file_data = get(f"{API}/contents/reports/{target}.md?ref={sha}")
-    try:
-        if file_data.get("encoding") != "base64":
-            raise ValueError("not base64")
-        raw = base64.b64decode(file_data["content"], validate=False)
-        markdown = raw.decode("utf-8")
-    except (KeyError, ValueError, UnicodeDecodeError, TypeError) as exc:
-        raise SourceError("Report bytes unavailable or invalid") from exc
-    manifest = inspect_report(markdown, target, sha, as_of=as_of, focus=focus)
-    manifest["git_blob_sha"] = file_data.get("sha")
-    return manifest
+    if date:
+        _date(date)
+        if date not in dates:
+            raise SourceError(f"Report {date} not found on main; do not substitute another edition")
+    # Main may contain explicitly labelled historical drafts. Latest must skip them.
+    for target in ([date] if date else reversed(dates)):
+        file_data = get(f"{API}/contents/reports/{target}.md?ref={sha}")
+        try:
+            if file_data.get("encoding") != "base64":
+                raise ValueError("not base64")
+            raw = base64.b64decode(file_data["content"], validate=False)
+            markdown = raw.decode("utf-8")
+        except (KeyError, ValueError, UnicodeDecodeError, TypeError) as exc:
+            raise SourceError("Report bytes unavailable or invalid") from exc
+        manifest = inspect_report(markdown, target, sha, as_of=as_of, focus=focus)
+        if not date and manifest["edition_type"] == "historical-draft":
+            continue
+        manifest["git_blob_sha"] = file_data.get("sha")
+        return manifest
+    raise SourceError("No non-draft report exists on main; briefing withheld")
 
 
 def main(argv=None):
