@@ -19,10 +19,11 @@ def report(date):
     return (ROOT / "reports" / f"{date}.md").read_text(encoding="utf-8")
 
 
-def fake_source(content=None, files=None):
+def fake_source(content=None, files=None, overrides=None):
     content = content if content is not None else report("2026-10-25")
     files = files if files is not None else ["2026-10-11", "2026-10-18", "2026-10-25"]
     requests = []
+    overrides = overrides or {}
 
     def get(url):
         requests.append(url)
@@ -30,11 +31,16 @@ def fake_source(content=None, files=None):
             return {"sha": SHA}
         if url == f"{API}/contents/reports?ref={SHA}":
             return [{"path": f"reports/{name}.md"} for name in files]
-        if url == f"{API}/contents/reports/2026-10-25.md?ref={SHA}":
+        prefix = f"{API}/contents/reports/"
+        if url.startswith(prefix) and url.endswith(f".md?ref={SHA}"):
+            name = url[len(prefix):].split(".md?", 1)[0]
+            if name not in files:
+                raise SourceError(f"Missing source: {name}")
+            report_text = overrides.get(name, content if name == "2026-10-25" else report(name))
             return {
                 "encoding": "base64",
                 "sha": "44a4a0bea1aca480af6261c31b1e399cced3a2d4",
-                "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+                "content": base64.b64encode(report_text.encode("utf-8")).decode("ascii"),
             }
         raise SourceError(f"Unexpected URL {url}")
     return get, requests
@@ -78,6 +84,21 @@ class BriefingSourceTests(unittest.TestCase):
         with self.assertRaisesRegex(SourceError, "not found"):
             retrieve_report(date="2026-10-12", as_of="2026-10-28", get=get)
         self.assertEqual(len(requests), 2)
+
+    def test_latest_skips_newer_explicit_historical_draft(self):
+        draft = report("2026-10-18").replace(
+            "briefing · 2026-10-18", "briefing · 2026-10-26", 1
+        )
+        get, requests = fake_source(
+            files=["2026-10-25", "2026-10-26"],
+            overrides={"2026-10-26": draft},
+        )
+        m = retrieve_report(as_of="2026-10-28", get=get)
+        self.assertEqual(m["report_date"], "2026-10-25")
+        self.assertEqual(m["edition_type"], "retrospective-main-report")
+        self.assertEqual(len(requests), 4)  # pin, list, skip draft, read non-draft
+        explicit = retrieve_report(date="2026-10-26", as_of="2026-10-28", get=get)
+        self.assertEqual(explicit["edition_type"], "historical-draft")
 
     def test_no_reports_on_main(self):
         get, _ = fake_source(files=[])
