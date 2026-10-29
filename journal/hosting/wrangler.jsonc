@@ -1,0 +1,11 @@
+{
+  // Intentionally no routes, custom_domains, triggers or deployment automation.
+  // Deployment remains separately authorised under Issue #13.
+  "name": "quant-folio-private-journal",
+  "compatibility_date": "2026-10-29",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "../site"
+  }
+}
