@@ -1,0 +1,29 @@
+{
+  "schema": "quant-folio-deep-assessment-v2",
+  "paper_id": "2610.25802",
+  "paper_version": "v2",
+  "paper_title": "Amortized Neural Filtering for Calibrated Posteriors in Statistical Arbitrage",
+  "authors": [
+    "Minkey Chang"
+  ],
+  "source_format": "application/pdf",
+  "pdf_url": "https://arxiv.org/pdf/2610.25802v2",
+  "arxiv_record_url": "https://arxiv.org/abs/2610.25802",
+  "retrieved_on": "2026-10-29",
+  "pdf_sha256": "dfb27aac8f65328c04486b7831c4a2c89a488a8a92c2deebe122b5e9a3e037b5",
+  "pdf_bytes": 1000584,
+  "source_evidence": "Complete nine-page arXiv v2 PDF, direct section/equation/table/figure anchors; PDF bytes independently hashed after download; results author-reported and not empirically replicated",
+  "markdown_sha256": "8fe21a8a31d07a7d8eced6792bf4ab0d8515c6ac9300550f1cad18e5f0b5c117",
+  "generation": {
+    "method": "chatgpt-full-paper-assisted-editorial",
+    "model": "GPT-6",
+    "generated_on": "2026-10-29",
+    "external_provider_calls": 0,
+    "prompt_tokens": null,
+    "completion_tokens": null,
+    "cost_usd": null,
+    "note": "One editorial assessment generated in ChatGPT using full PDF, with no external inference API calls or independent financial experiments. Session token/cost evidence unavailable. Owner scientific acceptance pending."
+  },
+  "status": "offline-preview-only; human review required",
+  "paper_results": "author-reported; not independently replicated"
+}

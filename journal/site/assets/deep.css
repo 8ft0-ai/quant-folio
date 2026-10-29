@@ -1,0 +1,68 @@
+/* Research Analysis V2 — static, accessible single-paper reading room. */
+.deep-page { background: #081115; color: var(--ink); overflow-wrap: anywhere; }
+.deep-page::before { background: radial-gradient(ellipse 65vw 620px at 75% 8%,#205b5055,transparent 74%),radial-gradient(ellipse 520px 480px at 0% 70%,#233d513b,transparent 70%); }
+.deep-page .skip-link { z-index: 1000; }
+.deep-top { min-height: 72px; max-width: 1500px; padding: 0 clamp(22px,5vw,82px); margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 22px; border-bottom: 1px solid var(--line); }
+.deep-back { color: var(--mint); font: 11px var(--mono); }
+.deep-brand { font: italic 28px var(--serif); white-space: nowrap; }
+.deep-brand span { font: 9px var(--mono); letter-spacing: .11em; color: var(--muted); vertical-align: middle; margin-left: 9px; }
+.deep-cover { padding: clamp(45px,7vw,104px) clamp(22px,5vw,82px) 67px; margin: auto; max-width: 1500px; position: relative; border-bottom: 1px solid var(--line); }
+.deep-kicker { font: 11px var(--mono); letter-spacing: .13em; color: var(--mint); }
+.deep-kicker span { color: var(--gold); margin: 0 12px; }
+.deep-cover-note { position: absolute; right: 5vw; top: 100px; color: var(--gold); font: italic 20px var(--serif); }
+.deep-cover h1 { font: 400 clamp(55px,8.5vw,116px)/.99 var(--serif); letter-spacing: -.058em; margin: 52px 0 30px; text-wrap: balance; max-width: 1050px; }
+.deep-cover h1 em { color: var(--mint); font-weight: 400; }
+.deep-dek { font: 19px/1.7 var(--serif); color: #cbd7d2; max-width: 700px; }
+.deep-meta { display: flex; flex-wrap: wrap; gap: 14px 24px; color: #98adaa; font: 10px var(--mono); letter-spacing: .1em; margin: 35px 0; }
+.deep-judgement { border-left: 2px solid var(--gold); padding: 9px 18px; margin-top: 40px; max-width: 700px; display: grid; gap: 11px; }
+.deep-judgement span { color: var(--gold); font: 10px var(--mono); letter-spacing: .13em; }
+.deep-judgement strong { font: 25px/1.35 var(--serif); }
+.deep-layout { max-width: 1500px; margin: auto; padding: 66px clamp(22px,5vw,82px) 100px; display: grid; grid-template-columns: minmax(170px,240px) minmax(0,760px); justify-content: space-between; gap: clamp(32px,7vw,118px); }
+.deep-toc { position: sticky; top: 30px; align-self: start; border-top: 1px solid #416963; padding-top: 25px; display: flex; flex-direction: column; gap: 0; }
+.deep-toc p { color: var(--gold); font: 10px var(--mono); letter-spacing: .12em; margin-bottom: 18px; }
+.deep-toc a { display: block; color: #aec0bc; font: 12px/1.5 var(--sans); padding: 11px 4px; border-bottom: 1px solid var(--line-soft); }
+.deep-toc a:hover, .deep-toc a:focus-visible { color: var(--mint); }
+.deep-article { min-width: 0; max-width: 760px; }
+.deep-article h2 { color: var(--ink); font: 400 clamp(32px,3vw,43px)/1.19 var(--serif); letter-spacing: -.025em; margin: 58px 0 20px; scroll-margin-top: 30px; }
+.deep-article h2:first-of-type { margin-top: 0; }
+.deep-article .deep-doc-title { color: var(--gold); font: italic 22px/1.45 var(--serif); margin-bottom: 28px; }
+.deep-article p { font: 15.5px/1.92 var(--sans); letter-spacing: .005em; color: #cad5d0; margin: 0 0 21px; }
+.deep-article p strong { color: #f0efe6; font-weight: 650; }
+.deep-article p em { color: #e2d1b0; }
+.deep-article a { color: #a6e4d5; text-decoration: underline; text-decoration-color: #638e83; text-underline-offset: 4px; }
+.deep-article a:hover { color: #effcf7; }
+.deep-article hr { border: 0; border-top: 1px solid var(--line); margin: 49px 0; }
+.deep-article h2 + p { font-size: 16px; }
+.deep-source { margin-top: 73px; border: 1px solid #41665e; background: #122725; padding: clamp(20px,4vw,34px); }
+.deep-source > span { color: var(--mint); font: 10px var(--mono); letter-spacing: .1em; }
+.deep-source p { margin: 17px 0; font-size: 12px; }
+.deep-source code { display: block; font: 11px/1.8 var(--mono); color: var(--gold); overflow-wrap: anywhere; white-space: normal; }
+.deep-footer { max-width: 1500px; margin: auto; padding: 33px clamp(22px,5vw,82px) 55px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); font: 10px var(--mono); color: var(--muted); letter-spacing: .08em; }
+.deep-footer a { color: var(--mint); }
+@media (max-width: 960px) {
+ .deep-layout { grid-template-columns: minmax(0,1fr); padding-top: 34px; gap: 28px; }
+ .deep-toc { position: static; border: 1px solid var(--line); padding: 16px 20px; }
+ .deep-toc a { padding: 9px 3px; }
+ .deep-cover-note { position: static; margin: 35px 0 0; }
+ .deep-cover h1 { margin-top: 32px; }
+}
+@media (max-width: 540px) {
+ .deep-brand span { display: none; }
+ .deep-top { min-height: 62px; }
+ .deep-cover { padding-bottom: 40px; }
+ .deep-cover h1 { font-size: clamp(48px,12vw,72px); }
+ .deep-dek { font-size: 17px; }
+ .deep-article p { font-size: 15px; line-height: 1.8; }
+ .deep-article h2 { font-size: 32px; margin-top: 45px; }
+ .deep-layout { padding-bottom: 54px; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .deep-page *, .deep-page *::before, .deep-page *::after { scroll-behavior: auto !important; transition: none !important; }
+}
+@media print {
+ .deep-page { color: #111; background: #fff; }
+ .deep-top, .deep-toc, .deep-footer { display: none; }
+ .deep-layout { display: block; padding: 0; }
+ .deep-article p { color: #222; }
+ .deep-article a { color: #115d56; }
+}
