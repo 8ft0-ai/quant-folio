@@ -42,6 +42,15 @@ The reproducible build reads the exact on-disk report, checks its SHA-256 agains
 
 The committed journal/site files are **static build output**, not a connected Cloudflare/GitHub Pages service. CI's existing Python test discovery includes tests/test_journal.py; tests check source identity, all eight paper IDs, missing counts, duplicate priorities, historical-draft refusal, category mismatch, link and dependency integrity, and byte-for-byte build repeatability. No new GitHub Actions workflows were added.
 
+## Focused independent-review remediation (EVD-01, A11Y-01, UX-01)
+
+- **EVD-01:** The build now proves the configured commit-to-report relationship using Git's actual commit/tree/blob objects. GitHub's Validate checkout fetches history so this check is mandatory in CI. If the commit or blob differs, the build fails closed.
+- All eight papers display their original source finding and open question. For the three priority papers, a source record is expandable beside the separately labelled editorial paraphrase and paper-specific limitation.
+- The evidence_review.json file records source-text anchors and reviewed editorial summary/limitation fingerprints for all three priorities, plus the commit and blob. The builder rejects unreviewed changes. Each editorial selection has a paper-specific review note. This is traceability against the source report, **not semantic fact verification, independent arXiv research or replication**.
+- **A11Y-01:** Section links and filters operate with a keyboard, dialog close restores focus to its trigger, and navigation/reading progress expose accessible roles and labels. Browser reflow has been inspected at 1440, 640, 390 and 320 CSS pixels, approximating the layout demands of 200% and 400% zoom on a 1280-pixel reference viewport. These tests do not substitute for a complete assistive-technology audit.
+- **UX-01:** A visible More arrow exposes additional mobile section links and is keyboard operable.
+- Optional browser acceptance test: install Puppeteer in a disposable directory and set NODE_PATH to its node_modules, then run node journal/testing/accessibility_smoke.cjs on a machine with Chrome. No Puppeteer dependency is needed to build the site or run CI.
+
 ## Private hosting — decision record (not deployed)
 
 **Preferred candidate:** Cloudflare Pages plus Cloudflare Access *only if complete coverage is demonstrable*. Alternative: a Cloudflare Worker with static assets plus Access, if it offers a simpler single protected application boundary. A localhost-only reading room is acceptable until deployment can meet the privacy gate. Ordinary GitHub Pages is not private hosting.

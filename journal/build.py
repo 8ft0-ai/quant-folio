@@ -7,6 +7,7 @@ import hashlib
 import html
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,6 +18,50 @@ from briefing_source import SourceError, inspect_report  # noqa: E402
 JOURNAL = ROOT / "journal"
 CONFIG = JOURNAL / "editorial.json"
 OUTPUT = JOURNAL / "site" / "index.html"
+EVIDENCE = JOURNAL / "evidence_review.json"
+
+def confirm_git_source(date: str, sha: str, blob_sha: str, raw: str) -> None:
+    """Validate commit/tree/blob membership locally; no mutable branch or network access."""
+    rel = f"reports/{date}.md"
+    try:
+        blob = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", f"{sha}:{rel}"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        actual = subprocess.run(
+            ["git", "-C", str(ROOT), "show", f"{sha}:{rel}"],
+            check=True, capture_output=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SourceError("Pinned Git commit or report unavailable: full Git history is required") from exc
+    if blob != blob_sha or actual != raw.encode("utf-8"):
+        raise SourceError("Pinned Git commit does not contain the reviewed report blob/bytes")
+
+def review_editorial(config: dict, papers: list[dict]) -> None:
+    """Validate reviewed editorial text against its explicit source anchors.
+
+    This is traceability, not machine semantic fact checking or scientific replication.
+    """
+    contract = json.loads(EVIDENCE.read_text(encoding="utf-8"))
+    lookup = {p["id"]: p for p in papers}
+    selections = {p["id"]: p for p in config["priorities"]}
+    if contract.get("source_commit") != config["source_main_sha"] or contract.get("source_blob") != config["report_git_blob_sha"]:
+        raise SourceError("Evidence review provenance does not match the pinned source")
+    entries = contract["priority_papers"]
+    if set(entries) != set(selections) or len(entries) != 3:
+        raise SourceError("Evidence contract has missing or extra priority paper identities")
+    for paper_id, record in entries.items():
+        source = lookup[paper_id]
+        editorial = selections[paper_id]
+        for field, key in (("finding", "finding_anchor"), ("relevance", "relevance_anchor"),
+                           ("open_question", "open_question_anchor")):
+            anchor = record.get(key)
+            if not isinstance(anchor, str) or len(anchor) < 15 or anchor not in (source[field] or ""):
+                raise SourceError(f"Evidence anchor mismatch for {paper_id}: {field}")
+        for field in ("summary", "limitation"):
+            digest = hashlib.sha256(editorial[field].encode("utf-8")).hexdigest()
+            if digest != record.get(field + "_sha256"):
+                raise SourceError(f"Editorial {field} changed without source-to-render review: {paper_id}")
 
 def e(value: object) -> str:
     return html.escape(str(value), quote=True)
@@ -50,6 +95,8 @@ def build() -> str:
         raise SourceError("Priority identities must be three distinct source paper IDs")
     if len(config["themes"]) != 3 or {t["category"] for t in config["themes"]} != set(source["categories_in_details"]):
         raise SourceError("Theme categories must reconcile with report")
+    confirm_git_source(date, sha, config["report_git_blob_sha"], raw)
+    review_editorial(config, papers)
     if any("<" in x for x in (config["headline"], config["standfirst"])):
         raise SourceError("Editorial text contains HTML and must be escaped")
 
@@ -101,6 +148,10 @@ def build() -> str:
              <p>{e(p["relevance"] or "Source relevance not recorded.")}</p>
              <span class="side-label limit-label">EVIDENCE LIMITATION</span>
              <p>{e(v["limitation"])}</p>
+             <details class="source-record"><summary>Compare original source wording</summary>
+               <p><strong>Author-reported finding:</strong> {e(p["finding"] or "Not recorded.")}</p>
+               <p><strong>Original open question:</strong> {e(p["open_question"] or "Not recorded.")}</p>
+             </details>
              <span class="paper-id">{e(p["id"])} · {e(p["paper_date"])}</span>
           </aside></div></article>''')
     feature_markup = "\n".join(features)
@@ -112,6 +163,7 @@ def build() -> str:
           <div class="paper-row-main"><span class="paper-row-index">{i:02d} — {e(p["id"])}</span>
             <h3>{e(p["title"])}</h3>
             <p>{e(p["finding"] or "Finding not recorded.")}</p>
+            <p class="source-question"><strong>Original open question:</strong> {e(p["open_question"] or "Not recorded.")}</p>
             <div class="paper-row-footer"><span class="category-tag {c}">{e(p["category"])}</span>
               <span class="evidence-tag">ABSTRACT ONLY</span></div>
           </div><div class="paper-row-actions">
@@ -146,7 +198,8 @@ def build() -> str:
     <span class="brand-mark" aria-hidden="true">Q<span>.</span></span><span><strong>QUANT<br>FOLIO</strong><small>RESEARCH INTELLIGENCE</small></span>
   </a>
   <div class="rail-rule"></div><div class="rail-label">THIS EDITION</div>
-  <nav class="rail-nav" aria-label="Sections">
+  <div class="nav-scroll-shell">
+  <nav class="rail-nav" aria-label="Sections (scrollable on narrow screens)" tabindex="0">
    <a class="active" href="#overview"><span>01</span> Overview</a>
    <a href="#landscape"><span>02</span> Research landscape</a>
    <a href="#priority"><span>03</span> Essential reading</a>
@@ -154,6 +207,8 @@ def build() -> str:
    <a href="#library"><span>05</span> Paper index</a>
    <a href="#sources"><span>06</span> Source &amp; evidence</a>
   </nav>
+  <button class="nav-more" type="button" aria-label="Show more navigation sections" hidden>More <span aria-hidden="true">→</span></button>
+  </div>
   <div class="rail-bottom"><span class="rail-bottom-kicker">THE READING ROOM</span>
     <p>A quiet place for serious research.</p>
     <div class="safety-pill"><span class="safety-dot"></span> LOCAL DESIGN PREVIEW</div>
@@ -284,7 +339,7 @@ def main() -> int:
     for name in ("styles.css", "app.js"):
         (assets / name).write_bytes((JOURNAL / "assets" / name).read_bytes())
     OUTPUT.write_text(page + "\n", encoding="utf-8")
-    print(f"Built {OUTPUT.relative_to(ROOT)}; source checksum and eight-paper contract PASS")
+    print(f"Built {OUTPUT.relative_to(ROOT)}; Git commit/blob and eight-paper evidence contract PASS")
     return 0
 
 if __name__ == "__main__":

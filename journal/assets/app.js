@@ -4,6 +4,22 @@
 (() => {
   const progress = document.getElementById("reading-progress");
   const toast = document.getElementById("toast");
+  const nav = document.querySelector(".rail-nav");
+  const navMore = document.querySelector(".nav-more");
+  function updateNavCue() {
+    // Only a narrow-screen affordance; not a fake link to another page.
+    const scrollable = nav.scrollWidth > nav.clientWidth + 3;
+    navMore.hidden = !scrollable || nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 4;
+  }
+  navMore.addEventListener("click", () => {
+    nav.scrollBy({ left: Math.max(135, nav.clientWidth * 0.7), behavior: "auto" });
+    updateNavCue();
+  });
+  nav.addEventListener("scroll", updateNavCue, { passive: true });
+  nav.addEventListener("focusin", updateNavCue);
+  window.addEventListener("resize", updateNavCue);
+  window.addEventListener("load", updateNavCue);
+  updateNavCue();
   const navLinks = [...document.querySelectorAll(".rail-nav a")];
   const filters = [...document.querySelectorAll("[data-filter]")];
   const paperRows = [...document.querySelectorAll(".paper-row")];
@@ -94,12 +110,18 @@
       ].join("\n");
       const copied = await copyPrompt(prompt);
       if (copied) {
+        button.focus();
         announce("Research prompt copied. Paste it into a ChatGPT conversation.");
       } else {
         const dialog = document.getElementById("prompt-dialog");
         document.getElementById("prompt-text").value = prompt;
-        if (dialog.showModal) dialog.showModal();
-        else announce("Clipboard blocked; open the paper and pinned report links instead.");
+        if (dialog.showModal) {
+          dialog.addEventListener("close", () => button.focus(), { once: true });
+          dialog.showModal();
+        } else {
+          button.focus();
+          announce("Clipboard blocked; open the paper and pinned report links instead.");
+        }
       }
     });
   });

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import hashlib
+import html
+import subprocess
 from html.parser import HTMLParser
 import json
 import re
@@ -103,6 +105,52 @@ class JournalBuildTests(unittest.TestCase):
         self.assertNotIn("sendBeacon", script)
         self.assertIn("LOCAL DESIGN PREVIEW", self.page)
         self.assertIn("no access controls are active", self.page)
+
+    def test_reviewed_commit_contains_exact_report_blob(self):
+        cfg = self.config
+        rel = f"reports/{cfg['edition']}.md"
+        blob = subprocess.check_output([
+            "git", "-C", str(build.ROOT), "rev-parse",
+            f"{cfg['source_main_sha']}:{rel}",
+        ], text=True).strip()
+        self.assertEqual(blob, cfg["report_git_blob_sha"])
+        data = subprocess.check_output([
+            "git", "-C", str(build.ROOT), "show",
+            f"{cfg['source_main_sha']}:{rel}",
+        ])
+        self.assertEqual(data, (build.ROOT / rel).read_bytes())
+
+    def test_bogus_commit_fails_closed(self):
+        changed = dict(self.config, source_main_sha="0" * 40)
+        with self.assertRaisesRegex(SourceError, "Pinned Git commit"):
+            self.altered_config(changed)
+
+    def test_unreviewed_editorial_changes_fail_closed(self):
+        for field in ("summary", "limitation"):
+            changed = json.loads(json.dumps(self.config))
+            changed["priorities"][0][field] = "Unsupported editorial text."
+            with self.assertRaisesRegex(SourceError, f"Editorial {field} changed"):
+                self.altered_config(changed)
+
+    def test_all_eight_original_findings_and_open_questions_in_render(self):
+        source = build.inspect_report(
+            (build.ROOT / "reports/2026-10-25.md").read_text(),
+            "2026-10-25", self.config["source_main_sha"],
+            as_of="2026-10-25",
+        )
+        for paper in source["papers"]:
+            with self.subTest(paper=paper["id"]):
+                self.assertIn(html.escape(paper["finding"], quote=True), self.page)
+                self.assertIn(html.escape(paper["open_question"], quote=True), self.page)
+                self.assertIn(paper["url"], self.page)
+        self.assertEqual(self.page.count('class="source-record"'), 3)
+
+    def test_accessible_navigation_and_dialog_controls(self):
+        for snippet in ('aria-label="Sections (scrollable on narrow screens)"',
+                        'class="nav-more"', 'aria-label="Show more navigation sections"',
+                        'tabindex="0"', 'aria-pressed="true"',
+                        'role="progressbar"', 'aria-labelledby="prompt-dialog-heading"'):
+            self.assertIn(snippet, self.page)
 
     def test_committed_render_matches_generator(self):
         existing = build.OUTPUT.read_text(encoding="utf-8")

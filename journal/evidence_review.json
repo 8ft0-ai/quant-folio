@@ -1,0 +1,31 @@
+{
+  "source_commit": "4b68dd5c36138bb49942f5078e0814bbb56c5a55",
+  "source_blob": "44a4a0bea1aca480af6261c31b1e399cced3a2d4",
+  "scope": "Editorial paper-specific source comparison against pinned report; not independent paper verification or replication.",
+  "priority_papers": {
+    "2610.27100": {
+      "finding_anchor": "Introduces a benchmark (LOB-Impact) to evaluate generative limit order book models by meas",
+      "relevance_anchor": "Provides a rigorous, counterfactual framework for testing whether generative market simula",
+      "open_question_anchor": "Does simulated market impact remain plausible across order sizes?",
+      "summary_sha256": "ae494a751bcfee2e36f42857fb85ce20945bce07286617527c505a76dfa2137b",
+      "limitation_sha256": "515a4351062e662a39ee4972907249cd7c01b8d8df1784dffd44ab5840721a0f",
+      "review_note": "Five NASDAQ stocks and five neural generators: author-reported simulated market impact does not independently validate execution quality."
+    },
+    "2610.25802": {
+      "finding_anchor": "Proposes a Neural Filter Estimator (NFE) that amortizes Bayesian filtering for statistical",
+      "relevance_anchor": "Addresses a core gap in stat-arb practice—discarding estimation uncertainty—with a scalabl",
+      "open_question_anchor": "Does posterior calibration persist beyond the reported market setting?",
+      "summary_sha256": "e97b607be1778300d5a608ffb792addb87f8c5854ae859f9f42f9dad41062d79",
+      "limitation_sha256": "2bdd7ee82f8c96544e5f2cc438a693a9f68e94a188320d8ba8ecc3fa1382ce6c",
+      "review_note": "Korean equities and simulation results may not generalise to other securities or regimes."
+    },
+    "2610.24544": {
+      "finding_anchor": "Evaluates TimeGAN-generated scenarios for Rachev-ratio portfolio optimization across 12 ET",
+      "relevance_anchor": "Demonstrates financial model risk from imperfect generative scenarios interacting with tai",
+      "open_question_anchor": "How sensitive are the results to synthetic-scenario tail dependence?",
+      "summary_sha256": "829aa736cfd3c5b059eb6718320d8877b4e8573e3a5b496bd5613688e709f557",
+      "limitation_sha256": "f8bf4f3c4f6c517621d4a674811729d1f8c997088dfc1d3bfa88c6e711fbab5a",
+      "review_note": "Twelve-ETF TimeGAN comparison is specific to that setting and does not establish universal generative-model failure."
+    }
+  }
+}

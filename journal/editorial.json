@@ -53,5 +53,6 @@
     "hypothesis": "A model with strong predictive fit can nevertheless fail an execution-relevant calibration, market-impact or tail-risk test.",
     "criterion": "Compare held-out calibration, impact-response and tail statistics against explicit real-data baselines; reject the hypothesis only if the synthetic system meets pre-specified tolerances across all three.",
     "status": "PROPOSAL · NOT EXECUTED"
-  }
+  },
+  "report_git_blob_sha": "44a4a0bea1aca480af6261c31b1e399cced3a2d4"
 }

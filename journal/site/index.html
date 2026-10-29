@@ -15,7 +15,8 @@
     <span class="brand-mark" aria-hidden="true">Q<span>.</span></span><span><strong>QUANT<br>FOLIO</strong><small>RESEARCH INTELLIGENCE</small></span>
   </a>
   <div class="rail-rule"></div><div class="rail-label">THIS EDITION</div>
-  <nav class="rail-nav" aria-label="Sections">
+  <div class="nav-scroll-shell">
+  <nav class="rail-nav" aria-label="Sections (scrollable on narrow screens)" tabindex="0">
    <a class="active" href="#overview"><span>01</span> Overview</a>
    <a href="#landscape"><span>02</span> Research landscape</a>
    <a href="#priority"><span>03</span> Essential reading</a>
@@ -23,6 +24,8 @@
    <a href="#library"><span>05</span> Paper index</a>
    <a href="#sources"><span>06</span> Source &amp; evidence</a>
   </nav>
+  <button class="nav-more" type="button" aria-label="Show more navigation sections" hidden>More <span aria-hidden="true">→</span></button>
+  </div>
   <div class="rail-bottom"><span class="rail-bottom-kicker">THE READING ROOM</span>
     <p>A quiet place for serious research.</p>
     <div class="safety-pill"><span class="safety-dot"></span> LOCAL DESIGN PREVIEW</div>
@@ -110,6 +113,10 @@
              <p>Provides a rigorous, counterfactual framework for testing whether generative market simulators reproduce realistic market impact—a critical requirement for training trading agents in simulation. The benchmark isolates learned response from mechanical book effects and validates against known baselines.</p>
              <span class="side-label limit-label">EVIDENCE LIMITATION</span>
              <p>Author-reported tests span five neural generators and five NASDAQ stocks; the measured impact curves are not independent evidence of real execution quality.</p>
+             <details class="source-record"><summary>Compare original source wording</summary>
+               <p><strong>Author-reported finding:</strong> Introduces a benchmark (LOB-Impact) to evaluate generative limit order book models by measuring emergent market impact. The authors inject metaorders into five neural LOB generators across five NASDAQ stocks and estimate impact exponents (0.63–1.21), finding that impact emerges naturally from next-token prediction training.</p>
+               <p><strong>Original open question:</strong> Does simulated market impact remain plausible across order sizes?</p>
+             </details>
              <span class="paper-id">2610.27100 · 2026-10-19</span>
           </aside></div></article>
 <article class="feature-card" id="paper-2610.25802">
@@ -127,6 +134,10 @@
              <p>Addresses a core gap in stat-arb practice—discarding estimation uncertainty—with a scalable amortized inference technique. Provides both controlled simulation evidence (showing correct uncertainty calibration) and live-market validation (Korean equities, net of costs) demonstrating economically significant improvement over point-estimate benchmarks and parity with a strong learned-factor baseline.</p>
              <span class="side-label limit-label">EVIDENCE LIMITATION</span>
              <p>Korean-equity results and controlled simulations do not establish general calibration or profitability in other instruments and regimes.</p>
+             <details class="source-record"><summary>Compare original source wording</summary>
+               <p><strong>Author-reported finding:</strong> Proposes a Neural Filter Estimator (NFE) that amortizes Bayesian filtering for statistical arbitrage, producing calibrated posteriors over latent spread states in a single forward pass. Empirically, on Korean equities the method halves to octuples the gap between forecast and realized returns of conventional point estimates, and position sizing from the posterior matches the Sharpe of an end-to-end Attention Factor Model without added risk.</p>
+               <p><strong>Original open question:</strong> Does posterior calibration persist beyond the reported market setting?</p>
+             </details>
              <span class="paper-id">2610.25802 · 2026-10-19</span>
           </aside></div></article>
 <article class="feature-card" id="paper-2610.24544">
@@ -144,6 +155,10 @@
              <p>Demonstrates financial model risk from imperfect generative scenarios interacting with tail-sensitive allocation, providing a rigorous negative result that cautions against uncritical use of synthetic data in portfolio construction.</p>
              <span class="side-label limit-label">EVIDENCE LIMITATION</span>
              <p>The negative result is tied to this generator, the 12-ETF setting and the evaluated Rachev-ratio strategies; it does not generalise to all synthetic-data methods.</p>
+             <details class="source-record"><summary>Compare original source wording</summary>
+               <p><strong>Author-reported finding:</strong> Evaluates TimeGAN-generated scenarios for Rachev-ratio portfolio optimization across 12 ETFs, finding synthetic scenarios understate volatility and tail dependence, with no causal performance improvement over historical resampling despite higher average returns in some hybrid configurations.</p>
+               <p><strong>Original open question:</strong> How sensitive are the results to synthetic-scenario tail dependence?</p>
+             </details>
              <span class="paper-id">2610.24544 · 2026-10-17</span>
           </aside></div></article></div>
   </section>
@@ -169,6 +184,7 @@
           <div class="paper-row-main"><span class="paper-row-index">01 — 2610.25495</span>
             <h3>Probabilistic Limit Order Book Forecasting with Conditional Diffusion Models</h3>
             <p>Introduces LOBGrad, a conditional diffusion model with RNN encoder for probabilistic limit order book forecasting, establishing an excess-risk oracle inequality for the noise-prediction objective and demonstrating improved queue metrics and calibrated intervals on crypto and equity data.</p>
+            <p class="source-question"><strong>Original open question:</strong> How does calibration hold under different market regimes?</p>
             <div class="paper-row-footer"><span class="category-tag micro">Market microstructure</span>
               <span class="evidence-tag">ABSTRACT ONLY</span></div>
           </div><div class="paper-row-actions">
@@ -181,6 +197,7 @@
           <div class="paper-row-main"><span class="paper-row-index">02 — 2610.28753</span>
             <h3>Understanding the Inner Workings of a State-Space Foundation Model for Limit Order Books</h3>
             <p>Analyzes an 8.2M-parameter Mamba-3 state-space model trained on tokenized LOB message streams, finding it learns a general, causally steerable internal representation of market microstructure (order-flow imbalance R²≈0.59) that transfers to unseen stocks.</p>
+            <p class="source-question"><strong>Original open question:</strong> Do the internal representations remain stable across securities?</p>
             <div class="paper-row-footer"><span class="category-tag micro">Market microstructure</span>
               <span class="evidence-tag">ABSTRACT ONLY</span></div>
           </div><div class="paper-row-actions">
@@ -193,6 +210,7 @@
           <div class="paper-row-main"><span class="paper-row-index">03 — 2610.28863</span>
             <h3>A game-theoretic analysis of the market microstructure in decentralized exchanges with concentrated liquidity</h3>
             <p>Models strategic liquidity provision in concentrated-liquidity DEXs as a mean-field game. Derives closed-form solutions for optimal range width, value function, stationary position distribution, and a critical volatility threshold above which provision is unprofitable. Empirical validation on WETH/USDC pools shows the critical volatility tracks realized volatility.</p>
+            <p class="source-question"><strong>Original open question:</strong> How sensitive is the liquidity model to different volatility assumptions?</p>
             <div class="paper-row-footer"><span class="category-tag micro">Market microstructure</span>
               <span class="evidence-tag">ABSTRACT ONLY</span></div>
           </div><div class="paper-row-actions">
@@ -205,6 +223,7 @@
           <div class="paper-row-main"><span class="paper-row-index">04 — 2610.24558</span>
             <h3>Optimal Trading Filters and the Value of Predictive Signals</h3>
             <p>Solves the stationary quadratic trading problem with transient price impact using Wiener–Hopf factorization. The optimal policy decomposes into a conditional forecast and an explicit causal linear filter. Recovers the Gârleanu–Pedersen aim portfolio under exponential resilience and derives fractional trading filters for power-law impact decay, revealing an optimal mean-reversion rate for OU signals.</p>
+            <p class="source-question"><strong>Original open question:</strong> How sensitive are the filters to the assumed impact-decay kernel?</p>
             <div class="paper-row-footer"><span class="category-tag signal">Signals and filtering</span>
               <span class="evidence-tag">ABSTRACT ONLY</span></div>
           </div><div class="paper-row-actions">
@@ -217,6 +236,7 @@
           <div class="paper-row-main"><span class="paper-row-index">05 — 2610.26919</span>
             <h3>Dynamic portfolio selection under range value-at-risk with logarithmic returns</h3>
             <p>Solves the continuous-time mean–Range Value-at-Risk (RVaR) portfolio problem with logarithmic returns. Reduces the dynamic optimization to a static quantile problem, characterizes the optimal terminal wealth via the convex envelope of an RVaR-specific weighting function, and derives closed-form wealth processes and replicating strategies under constant investment opportunities. Shows RVaR nests VaR and Expected Shortfall as limiting cases.</p>
+            <p class="source-question"><strong>Original open question:</strong> How robust are the resulting policies when investment assumptions change?</p>
             <div class="paper-row-footer"><span class="category-tag risk">Portfolio and risk</span>
               <span class="evidence-tag">ABSTRACT ONLY</span></div>
           </div><div class="paper-row-actions">
