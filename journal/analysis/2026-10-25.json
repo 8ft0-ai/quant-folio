@@ -1,0 +1,70 @@
+{
+  "schema": "quant-folio-research-analysis-v1",
+  "edition": "2026-10-25",
+  "source_commit": "4b68dd5c36138bb49942f5078e0814bbb56c5a55",
+  "source_report_sha256": "c78fbeece62969f1765ed80f67aece3f9eb3473dd53648c84fb0238fbb5676cf",
+  "prompt_version": "research-analysis-v1.0",
+  "generation": {
+    "method": "chatgpt-assisted-editorial-draft",
+    "model": "GPT-6",
+    "generated_on": "2026-10-29",
+    "external_provider_calls": 0,
+    "prompt_tokens": null,
+    "completion_tokens": null,
+    "cost_usd": null,
+    "note": "Produced in this implementation session using pinned report text, not a newly executed NVIDIA/API batch. Token usage and pricing are unavailable. Requires human evidence acceptance."
+  },
+  "assessments": [
+    {
+      "id": "2610.27100",
+      "source_url": "https://arxiv.org/abs/2610.27100",
+      "source_scope": "pinned-report-abstract-summary-only",
+      "paper_version": "not independently checked",
+      "method": "The pinned report attributes to LOB-Impact a counterfactual benchmark that injects metaorders into five neural limit-order-book generators across five NASDAQ stocks and measures resulting impact exponents.",
+      "claim": "The report attributes to the authors exponents between 0.63 and 1.21 and the interpretation that market-impact behaviour emerges from next-token training. Neither the measurements nor the underlying paper were independently verified in this pilot.",
+      "relevance": "An impact-response test is potentially more informative for simulator selection than matching marginal order-flow statistics. It could become a screening gate for market-simulation research, not a profitability signal.",
+      "limitations": "The reported generator/stock sample is narrow; experimental intervention design, calibration to real execution and sensitivity to order size cannot be evaluated from the report summary. The quoted exponents are author-reported, not measured here.",
+      "falsification": "On held-out securities, dates and order sizes, pre-register tolerances for empirical signed impact, temporary-versus-permanent response and uncertainty bands. Reject simulator fidelity if it misses those ranges or materially degrades outside the reported sample.",
+      "evidence_status": "author-reported-and-analytical-interpretation",
+      "independent_verification": "none",
+      "title": "LOB-Impact Benchmark: Emergent Market Impact in Generative Limit Order Book Models",
+      "source_finding_sha256": "6e7cba148a837442c54637079c446eba32fed1763dfe66b51c95615b58d256ee",
+      "source_relevance_sha256": "bc1b0d7746f23eda9ef56b77de4c100699b47b7771a076c00e969c8ffa152989",
+      "source_open_question_sha256": "8e3a9536f4df64f856857070137ecb8f6e33e881a15b15557f93ea894c70322a"
+    },
+    {
+      "id": "2610.25802",
+      "source_url": "https://arxiv.org/abs/2610.25802",
+      "source_scope": "pinned-report-abstract-summary-only",
+      "paper_version": "not independently checked",
+      "method": "The pinned report describes a Neural Filter Estimator that amortises Bayesian filtering into a forward pass that produces a posterior distribution over latent statistical-arbitrage spread states.",
+      "claim": "The report attributes to the authors controlled calibration evidence and Korean-equity results relative to point estimates and an Attention Factor Model. These are unreplicated, source-reported outcomes rather than demonstrated transferable performance.",
+      "relevance": "Posterior-aware decisions may offer an explicit way to study forecast uncertainty, risk limits and position sizing instead of depending on a single estimated state.",
+      "limitations": "No independent posterior calibration checks, chronological leakage audit, baseline parity review or transaction-cost sensitivity analysis was performed. Korean-equity evidence alone does not establish out-of-market calibration or net profitability.",
+      "falsification": "Compare NFE with a matched point estimator and a simple probabilistic filter on purged chronological splits. Pre-register coverage, PIT uniformity, CRPS, log score, cost-aware outcomes and regime breakdowns; reject the added complexity if calibration or performance is not robust.",
+      "evidence_status": "author-reported-and-analytical-interpretation",
+      "independent_verification": "none",
+      "title": "Amortized Neural Filtering for Calibrated Posteriors in Statistical Arbitrage",
+      "source_finding_sha256": "fdc127e3f1144914a3e40336a5c8c40f661a35afa6ae813dec0164ab0ec11648",
+      "source_relevance_sha256": "0e1b0d79938e79407efa88661599611e3b20f08cf9e8a0a58199704e81bb7abe",
+      "source_open_question_sha256": "c334f8eea1c35c33605df25f943a4e35b1f9732e4f6e00201e5ebb7cf53ed930"
+    },
+    {
+      "id": "2610.24544",
+      "source_url": "https://arxiv.org/abs/2610.24544",
+      "source_scope": "pinned-report-abstract-summary-only",
+      "paper_version": "not independently checked",
+      "method": "The pinned report describes Rachev-ratio portfolio optimisation using TimeGAN scenarios, comparing synthetic replacement and supplementation of historical return samples across twelve ETFs.",
+      "claim": "The report attributes to the authors underestimation of volatility and tail dependence in synthetic scenarios, without a causal performance improvement over historical resampling. The original empirical outputs were not inspected.",
+      "relevance": "Tail-sensitive portfolio objectives can magnify shortcomings of synthetic data; this provides a useful candidate negative-control case before adding synthetic scenarios to risk research.",
+      "limitations": "The abstract-level record does not expose the scenario-generation protocol, conditioning, effective sample size, uncertainty of tail estimates or alternative generators. No portfolio returns or tail-risk metrics were recomputed.",
+      "falsification": "Using purged rolling windows, compare historical-only, synthetic-only and supplement scenarios on out-of-sample upper/lower tail dependence, exceedance calibration, turnover and drawdown. Reject supplementation if tail-risk estimation or stability worsens.",
+      "evidence_status": "author-reported-and-analytical-interpretation",
+      "independent_verification": "none",
+      "title": "Rachev-Ratio Portfolio Optimization with TimeGAN Scenarios: Replacement versus Supplementation",
+      "source_finding_sha256": "4040c155d6e52ce45bb624e1241740bd013e846cfc2678e98718283629f58cdc",
+      "source_relevance_sha256": "c372e9f5d30fd3207dde54f5adeed3de10197d79afdad59c61a1afc48123ac16",
+      "source_open_question_sha256": "adef1bdc15863fe122079e4d00b786d3c1589d36ef8f5c8f116895c6d608b157"
+    }
+  ]
+}

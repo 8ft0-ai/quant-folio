@@ -297,3 +297,15 @@ footer a { color: #9bc8be; font: 10px var(--mono); }
   .nav-scroll-shell .rail-nav { margin: 0; width: 100%; }
   .nav-more:not([hidden]) { right: 12px; }
 }
+
+/* Issue #16: source-qualified, keyboard-native research assessment disclosure. */
+.research-analysis { margin: 23px 0 18px; border: 1px solid #45635f; border-radius: 5px; background: #142626; }
+.research-analysis > summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; padding: 13px 15px; font-size: 12px; color: var(--mint); }
+.research-analysis > summary span { font: 9px var(--mono); color: var(--gold); letter-spacing: .04em; }
+.analysis-body { padding: 5px 16px 18px; overflow-wrap: anywhere; }
+.analysis-warning { color: var(--gold); font-size: 12px; line-height: 1.65; }
+.analysis-part { padding: 9px 0; border-top: 1px solid var(--line); }
+.analysis-part h4 { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .09em; color: var(--mint); margin: 4px 0 8px; }
+.analysis-part p { font-size: 13px; line-height: 1.7; color: var(--ink-dim); margin-bottom: 2px; }
+.analysis-source { font: 10px/1.7 var(--mono); color: var(--muted); margin: 12px 0 0; }
+@media (max-width: 600px) { .research-analysis > summary { align-items: flex-start; } .analysis-body { padding: 5px 12px 14px; } }
