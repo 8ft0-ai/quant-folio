@@ -1,0 +1,58 @@
+{
+  "schema": "quant-folio-private-journal-v1",
+  "edition": "2026-10-25",
+  "source_main_sha": "4b68dd5c36138bb49942f5078e0814bbb56c5a55",
+  "report_sha256": "c78fbeece62969f1765ed80f67aece3f9eb3473dd53648c84fb0238fbb5676cf",
+  "eyebrow": "THE OCTOBER NOTEBOOK · EDITION 001",
+  "headline": "When markets learn to simulate themselves.",
+  "standfirst": "A research dispatch on probabilistic order books, synthetic markets and the difficult distance between a convincing model and a trustworthy decision.",
+  "opening": "The most compelling question in this edition is not whether machines can model financial markets. It is whether those models preserve the details that matter once a forecast becomes an order, an allocation or a risk decision.",
+  "takeaway": "The next frontier is not simulation alone. It is proving that simulated behaviour survives calibration, market impact, changing regimes and the tails.",
+  "themes": [
+    {
+      "category": "Market microstructure",
+      "short": "The market, encoded",
+      "desc": "Generative order books, learned market states and strategic liquidity models."
+    },
+    {
+      "category": "Portfolio and risk",
+      "short": "The cost of plausible data",
+      "desc": "Synthetic scenarios and risk-sensitive allocation expose fragile assumptions."
+    },
+    {
+      "category": "Signals and filtering",
+      "short": "From forecasts to action",
+      "desc": "Filtering and posterior uncertainty connect information to trading decisions."
+    }
+  ],
+  "priorities": [
+    {
+      "id": "2610.27100",
+      "headline": "Can a synthetic order book move like a real market?",
+      "summary": "The LOB-Impact benchmark asks whether generative market models produce credible responses to injected trades — a stricter test than good-looking order-flow predictions.",
+      "limitation": "Author-reported tests span five neural generators and five NASDAQ stocks; the measured impact curves are not independent evidence of real execution quality."
+    },
+    {
+      "id": "2610.25802",
+      "headline": "A forecast should know when it might be wrong.",
+      "summary": "Neural filtering for statistical arbitrage points towards position sizing informed by the full uncertainty distribution rather than a single estimated spread.",
+      "limitation": "Korean-equity results and controlled simulations do not establish general calibration or profitability in other instruments and regimes."
+    },
+    {
+      "id": "2610.24544",
+      "headline": "The danger of believable synthetic scenarios.",
+      "summary": "TimeGAN can produce plausible portfolio scenarios while understating volatility and tail dependence, potentially undermining tail-sensitive optimisation.",
+      "limitation": "The negative result is tied to this generator, the 12-ETF setting and the evaluated Rachev-ratio strategies; it does not generalise to all synthetic-data methods."
+    }
+  ],
+  "synthesis_heading": "Fidelity is only useful when it survives a decision.",
+  "synthesis": "Across probabilistic prediction, generative microstructure and portfolio simulation, the common test is whether a model retains the features a decision depends on. Calibration, impact and tail behaviour form a more demanding standard than predictive fit alone.",
+  "experiment": {
+    "headline": "A synthetic-market fidelity audit",
+    "basis": "Editorial proposal inspired by LOB-Impact, LOBGrad and TimeGAN; none of these papers verifies the proposed combined evaluation.",
+    "hypothesis": "A model with strong predictive fit can nevertheless fail an execution-relevant calibration, market-impact or tail-risk test.",
+    "criterion": "Compare held-out calibration, impact-response and tail statistics against explicit real-data baselines; reject the hypothesis only if the synthetic system meets pre-specified tolerances across all three.",
+    "status": "PROPOSAL · NOT EXECUTED"
+  },
+  "report_git_blob_sha": "44a4a0bea1aca480af6261c31b1e399cced3a2d4"
+}
