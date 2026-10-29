@@ -19,6 +19,7 @@ JOURNAL = ROOT / "journal"
 CONFIG = JOURNAL / "editorial.json"
 OUTPUT = JOURNAL / "site" / "index.html"
 EVIDENCE = JOURNAL / "evidence_review.json"
+ANALYSIS = JOURNAL / "analysis" / "2026-10-25.json"
 
 def confirm_git_source(date: str, sha: str, blob_sha: str, raw: str) -> None:
     """Validate commit/tree/blob membership locally; no mutable branch or network access."""
@@ -62,6 +63,67 @@ def review_editorial(config: dict, papers: list[dict]) -> None:
             digest = hashlib.sha256(editorial[field].encode("utf-8")).hexdigest()
             if digest != record.get(field + "_sha256"):
                 raise SourceError(f"Editorial {field} changed without source-to-render review: {paper_id}")
+
+def load_analysis(config: dict, papers: list[dict]) -> dict[str, dict]:
+    """Optional pinned editorial enrichment; invalid/missing input falls back safely."""
+    try:
+        record = json.loads(ANALYSIS.read_text(encoding="utf-8"))
+        if record["schema"] != "quant-folio-research-analysis-v1":
+            return {}
+        if record["edition"] != config["edition"] or record["source_commit"] != config["source_main_sha"]:
+            return {}
+        if record["source_report_sha256"] != config["report_sha256"]:
+            return {}
+        if record["prompt_version"] != "research-analysis-v1.0":
+            return {}
+        gen = record["generation"]
+        if gen["method"] != "chatgpt-assisted-editorial-draft" or gen["external_provider_calls"] != 0:
+            return {}
+        expected = {p["id"]: p for p in papers}
+        priorities = {p["id"] for p in config["priorities"]}
+        result = {}
+        allowed = {"method", "claim", "relevance", "limitations", "falsification"}
+        for item in record["assessments"]:
+            ident = item["id"]
+            if ident not in priorities or ident in result:
+                return {}
+            if item["source_url"] != expected[ident]["url"] or item["title"] != expected[ident]["title"]:
+                return {}
+            for field, name in (("finding", "source_finding_sha256"),
+                                ("relevance", "source_relevance_sha256"),
+                                ("open_question", "source_open_question_sha256")):
+                if item.get(name) != hashlib.sha256(expected[ident][field].encode("utf-8")).hexdigest():
+                    return {}
+            if item["source_scope"] != "pinned-report-abstract-summary-only":
+                return {}
+            if item["independent_verification"] != "none":
+                return {}
+            if item["evidence_status"] != "author-reported-and-analytical-interpretation":
+                return {}
+            if any(not isinstance(item.get(k), str) or not item[k].strip() for k in allowed):
+                return {}
+            result[ident] = item
+        return result if set(result) == priorities else {}
+    except (OSError, ValueError, KeyError, TypeError):
+        return {}
+
+
+def render_analysis(item: dict | None) -> str:
+    if not item:
+        return ""
+    fields = (("Method", "method"), ("Author-reported findings", "claim"),
+              ("Potential research relevance", "relevance"),
+              ("Paper-specific limitations", "limitations"),
+              ("Proposed falsification — not executed", "falsification"))
+    detail = "".join(f'<section class="analysis-part"><h4>{e(label)}</h4><p>{e(item[key])}</p></section>'
+                     for label, key in fields)
+    return (f'<details class="research-analysis"><summary>AI Research Assessment'
+            f'<span>ABSTRACT-LEVEL · UNVERIFIED</span></summary>'
+            f'<div class="analysis-body"><p class="analysis-warning">AI-assisted editorial interpretation of the pinned report, '
+            f'not independent paper review, experimental evidence or trading advice.</p>{detail}'
+            f'<p class="analysis-source">SOURCE · {e(item["source_scope"])} · '
+            f'{e(item["paper_version"])} · independent verification: none</p></div></details>')
+
 
 def e(value: object) -> str:
     return html.escape(str(value), quote=True)
@@ -130,6 +192,7 @@ def build() -> str:
     def paper_category(c: str) -> str:
         return {"Market microstructure": "micro", "Portfolio and risk": "risk", "Signals and filtering": "signal"}[c]
 
+    analyses = load_analysis(config, papers)
     features = []
     for i, v in enumerate(config["priorities"], 1):
         p = lookup[v["id"]]
@@ -148,6 +211,7 @@ def build() -> str:
              <p>{e(p["relevance"] or "Source relevance not recorded.")}</p>
              <span class="side-label limit-label">EVIDENCE LIMITATION</span>
              <p>{e(v["limitation"])}</p>
+             {render_analysis(analyses.get(p["id"]))}
              <details class="source-record"><summary>Compare original source wording</summary>
                <p><strong>Author-reported finding:</strong> {e(p["finding"] or "Not recorded.")}</p>
                <p><strong>Original open question:</strong> {e(p["open_question"] or "Not recorded.")}</p>
