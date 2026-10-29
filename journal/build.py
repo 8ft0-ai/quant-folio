@@ -14,6 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from briefing_source import SourceError, inspect_report  # noqa: E402
+from journal import deep_assessment  # noqa: E402
 
 JOURNAL = ROOT / "journal"
 CONFIG = JOURNAL / "editorial.json"
@@ -193,9 +194,11 @@ def build() -> str:
         return {"Market microstructure": "micro", "Portfolio and risk": "risk", "Signals and filtering": "signal"}[c]
 
     analyses = load_analysis(config, papers)
+    deep_ready = deep_assessment.load() is not None
     features = []
     for i, v in enumerate(config["priorities"], 1):
         p = lookup[v["id"]]
+        deep_markup = ('<a href="./assessments/2610.25802.html" class="deep-full-link">Read full assessment <span aria-hidden="true">→</span></a>\n             ' if deep_ready and p["id"] == deep_assessment.PAPER_ID else "")
         features.append(f'''<article class="feature-card" id="paper-{e(p["id"])}">
           <div class="feature-overline"><span class="feature-number">0{i}</span>
           <span class="category-tag {paper_category(p["category"])}">{e(p["category"])}</span>
@@ -205,7 +208,7 @@ def build() -> str:
              <h3>{e(p["title"])}</h3>
              <p class="feature-summary">{e(v["summary"])}</p>
              {a(p["url"], "Read on arXiv", "text-link")}
-             <button type="button" class="small-action feature-copy" data-copy-prompt data-id="{e(p["id"])}"
+             {deep_markup}<button type="button" class="small-action feature-copy" data-copy-prompt data-id="{e(p["id"])}"
                data-title="{e(p["title"])}" data-url="{e(p["url"])}">Copy ChatGPT research prompt ↗</button>
           </div><aside class="feature-context"><span class="side-label">EDITORIAL CONSIDERATION</span>
              <p>{e(p["relevance"] or "Source relevance not recorded.")}</p>
@@ -400,9 +403,10 @@ def main() -> int:
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     assets = OUTPUT.parent / "assets"
     assets.mkdir(exist_ok=True)
-    for name in ("styles.css", "app.js"):
+    for name in ("styles.css", "app.js", "deep.css"):
         (assets / name).write_bytes((JOURNAL / "assets" / name).read_bytes())
     OUTPUT.write_text(page + "\n", encoding="utf-8")
+    deep_assessment.write_preview()
     print(f"Built {OUTPUT.relative_to(ROOT)}; Git commit/blob and eight-paper evidence contract PASS")
     return 0
 

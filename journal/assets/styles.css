@@ -309,3 +309,7 @@ footer a { color: #9bc8be; font: 10px var(--mono); }
 .analysis-part p { font-size: 13px; line-height: 1.7; color: var(--ink-dim); margin-bottom: 2px; }
 .analysis-source { font: 10px/1.7 var(--mono); color: var(--muted); margin: 12px 0 0; }
 @media (max-width: 600px) { .research-analysis > summary { align-items: flex-start; } .analysis-body { padding: 5px 12px 14px; } }
+
+/* V2 full-paper navigation; visible only for a verified assessment. */
+.deep-full-link { margin: 13px 0; display: inline-flex; align-items: center; gap: 9px; background: #23473f; border: 1px solid #5a9885; color: #d8fff0; font: 11px var(--mono); padding: 11px 14px; border-radius: 3px; }
+.deep-full-link:hover { background: #316657; color: #fff; }

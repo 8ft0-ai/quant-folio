@@ -42,3 +42,25 @@ zoom acceptance remains a separate review qualification.
 **Decision gate:** inspect source claims and desktop/mobile behaviour, accept or
 reject the three drafts, and only then consider future provider inference and
 publication automation. The private live journal remains unchanged.
+
+## Research Analysis V2 — bounded full-paper pilot (Issue #18)
+
+One deeper source-linked assessment is authored in `2610.25802v2-deep.md`, with
+pinned arXiv PDF bytes/version, editorial generation disclosure and the Markdown
+SHA-256 recorded in `2610.25802v2-deep.json`. This is **not** an automatically
+inferred assessment, a verified replication or a replacement for V1 snapshots.
+
+`python3 -m journal.build` checks the local Markdown against the manifest, then
+writes `journal/site/assessments/2610.25802.html` and a single same-origin link
+in the existing journal. Missing or invalid metadata fails closed: the existing
+journal and eight copy-prompt interactions remain functional, but no full-page
+link is shown and any stale deep page is removed. No network requests or third-
+party Markdown parser are required at build time. The generated site and preview
+screenshots are deliberately committed for an offline review; deploying remains
+separately governed and is **not** authorised by this PR.
+
+Validation: `python3 -m unittest discover -s tests -v`; optional local Chrome and
+Playwright acceptance: `node journal/testing/deep_smoke.cjs` (with Playwright
+available on `NODE_PATH`). Screenshots: `journal/previews/deep-desktop.png` and
+`journal/previews/deep-mobile.png`. The browser's effective-width 640/320 px
+reflow checks approximate 200/400% zoom and are **not** a screen-reader audit.
